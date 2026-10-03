@@ -10,9 +10,22 @@
 		8E2086F230716429007CE268 /* AcousticMaps.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = AcousticMaps.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		8E20873D3071BAC4007CE268 /* Exceptions for "AcousticMaps" folder in "AcousticMaps" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 8E2086F130716429007CE268 /* AcousticMaps */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		8E2086F430716429007CE268 /* AcousticMaps */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				8E20873D3071BAC4007CE268 /* Exceptions for "AcousticMaps" folder in "AcousticMaps" target */,
+			);
 			path = AcousticMaps;
 			sourceTree = "<group>";
 		};
@@ -246,6 +259,7 @@
 				DEVELOPMENT_TEAM = 4HR2S4BB5Y;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = AcousticMaps/Info.plist;
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "AcousticMaps uses your location to provide walking guidance.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "AcousticMaps uses the microphone to hear your destination.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -280,6 +294,7 @@
 				DEVELOPMENT_TEAM = 4HR2S4BB5Y;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = AcousticMaps/Info.plist;
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "AcousticMaps uses your location to provide walking guidance.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "AcousticMaps uses the microphone to hear your destination.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;

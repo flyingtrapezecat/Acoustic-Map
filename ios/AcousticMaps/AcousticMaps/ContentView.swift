@@ -102,34 +102,17 @@ struct ContentView: View {
             .padding()
         }
         
-        .task(id: tripActive) {
-            guard tripActive else { return }
-
-            let clock = ContinuousClock()
-
-            while !Task.isCancelled {
-                let nextTick = clock.now.advanced(by: .seconds(1))
-
-                if let fix = locationReader.location,
-                   let heading = locationReader.headingDegrees {
-                    await connection.sendRealUpdate(
-                        location: fix,
-                        heading: heading
-                    )
-                }
-
-                do {
-                    try await Task.sleep(
-                        until: nextTick,
-                        clock: clock
-                    )
-                } catch {
-                    break
+        .onAppear {
+                    // Location callbacks send updates, including while locked.
+                    locationReader.onUpdate = { fix, heading in
+                        await connection.sendRealUpdate(
+                            location: fix,
+                            heading: heading
+                        )
+                    }
                 }
             }
         }
-    }
-}
 
 #Preview {
     ContentView(connection: ConnectionTest())
