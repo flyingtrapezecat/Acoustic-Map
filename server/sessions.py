@@ -12,7 +12,8 @@ def _new():
         "route": None,
         "step_i": 0,
         "announced": set(),
-        "progress_m": 0.0, "raw_along_m": 0.0, "off_m": 0.0,
+        "progress_m": 0.0, "raw_along_m": 0.0, "off_m": 0.0, "seg_i": 0,
+        "last_fix_ts": None, "reassured_at_m": 0.0,
         "send_route": False,
         "last_say": None, "last_say_t": 0.0,
         "bad_off": 0, "bad_wrong": 0, "weak_gps_since": None, "last_reroute_t": 0.0,
@@ -29,7 +30,7 @@ def get(session_id):
 def start_trip(sesh, route):
     """Put the session on a fresh route."""
     sesh.update(state="navigating", route=route, step_i=0, announced=set(),
-             progress_m=0.0, raw_along_m=0.0, off_m=0.0,
+             progress_m=0.0, raw_along_m=0.0, off_m=0.0, seg_i=0, reassured_at_m=0.0,
              bad_off=0, bad_wrong=0, send_route=True)
 
 

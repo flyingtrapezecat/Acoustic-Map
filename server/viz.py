@@ -224,8 +224,11 @@ const stateColor = s => css(COLORS[s] || "--other");
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 
 const map = L.map("map");
-L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-  { maxZoom: 21, maxNativeZoom: 19, attribution: "&copy; OpenStreetMap contributors" }).addTo(map);
+const street = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',
+  {maxZoom: 21, maxNativeZoom: 19, attribution: 'Tiles &copy; Esri'}).addTo(map);
+const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+  {maxZoom: 21, maxNativeZoom: 19, attribution: 'Imagery &copy; Esri'});
+L.control.layers({Street: street, Satellite: satellite}).addTo(map);
 
 // ----- route -----
 document.getElementById("title").textContent = D.title;

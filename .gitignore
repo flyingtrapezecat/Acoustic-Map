@@ -5,3 +5,8 @@ __pycache__/
 .DS_Store
 server/logs
 xcuserdata/
+server/viz/
+
+# Local Claude Code files (agents, settings) - not shared
+.claude/
+CLAUDE.local.md

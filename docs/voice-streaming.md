@@ -68,6 +68,10 @@ arrives before Grok is ready.
 | `ready` | — | Optional: a light `tick` haptic so the user knows it's listening |
 | `partial` | `text` | Optional: show it on screen. Do not speak it. |
 | `reply` | `say`, `haptic`, `state`, `route` | Handle exactly like an `/update` response, then expect the socket to close |
+
+For open-ended requests the agent ([agent.md](agent.md)) runs in the background. The `reply` is then a short
+acknowledgement with `state: "thinking"`, and the real answer arrives on `WS /events` (or on the next
+`/update`). See [contract.md](contract.md).
 | `error` | `message` | Speak "Sorry, I didn't catch that" and close |
 
 If no reply arrives within 15 s, the phone closes the socket and tells the user to try again.

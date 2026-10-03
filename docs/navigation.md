@@ -23,12 +23,12 @@ Run these checks in order. **The first one that fires is what gets said this tic
 |---|---|---|---|
 | 0 | Mute | Session is `listening` or `thinking` | `null`. Never talk over the user. |
 | 1 | Bad GPS | `accuracy_m > 30` | Don't correct anything this tick. If it lasts 10 s, say "GPS signal is weak" once. |
-| 2 | Arrived | Within 12 m of the destination | "You've arrived at Doe Library." / `arrived` → state `arrived` |
-| 3 | Off route | More than `max(20 m, 1.5 × accuracy)` from the route line, for 3 ticks in a row | "You've gone off the route. Finding a new one." / `off_route`, then reroute (at most once per 15 s) and send the new `route` |
-| 4 | Turn now | Within 10 m of the next turn point | "Turn left now onto Bancroft Way." / `turn_left` or `turn_right` |
-| 5 | Wrong way | Walking (`speed_mps > 0.5`) and `course_deg` more than 120° off the route's direction, for 3 ticks | "You're heading the wrong way. Turn around." / `off_route` |
-| 6 | Turn ahead | Within 40 m of the next turn, and not yet announced | "In 40 meters, turn left onto Bancroft Way." / `tick` |
-| 7 | Passed a turn | Distance to the turn point grows after it was under 15 m | Move on to the next step. "Continue straight for 200 meters." / `tick` |
+| 2 | Arrived | Within 12 m of the destination, or route progress within 12 m of the end | "You've arrived at Doe Library." / `arrived` → state `arrived` |
+| 3 | Off route | More than `max(20 m, 1.5 × accuracy)` from the nearby stretch of route, for 3 ticks in a row | "You've gone off the route. Finding a new one." / `off_route`, then reroute (at most once per 15 s) and send the new `route` |
+| 4 | Turn now | Within 10 m of the next turn, measured along the route | "Turn left now onto Bancroft Way." / `turn_left` or `turn_right` |
+| 5 | Wrong way | Walking (`speed_mps > 0.5`) and either moving backward along the route or `course_deg` more than 120° off the route's direction, for 3 ticks | "You're heading the wrong way. Turn around." / `off_route` |
+| 6 | Turn ahead | Within 40 m of the next turn, measured along the route, and not yet announced | "In 40 meters, turn left onto Bancroft Way." / `tick` |
+| 7 | Passed a turn | Route progress is past the turn. Progress only moves forward, so a passed turn is never announced again. | Move on to the next step. "Continue straight for 200 meters." / `tick` |
 | 8 | Reassurance | Nothing said for 45 s | "Still on route. 120 meters to the next turn." |
 
 Rules that apply to every message:
@@ -43,8 +43,8 @@ Rules that apply to every message:
 
 ## Server files (Joy)
 
-- `geo.py`: `distance_m`, `bearing_deg`, `move`, plus `distance_to_line(point, polyline)` and
-  `angle_diff(a, b)`. The fake phone already uses the first three.
+- `geo.py`: `distance_m`, `bearing_deg`, `move`, `angle_diff`, `clock_face`, plus `cumulative_m` and
+  `locate` for route tracking (see server-build.md, "Route tracking"). The fake phone already uses the first three.
 - `routing.py`:
   - `find_place(text, near) -> (name, lat, lng)` turns a spoken destination into coordinates.
   - `get_route(start, end) -> {polyline, steps}` returns the walking route.
@@ -92,20 +92,16 @@ produces no corrections at all. That is the first thing to verify.
 
 ---
 
-## Overall build order (both docs)
+## Build order
 
-Main feature first; voice second.
+The current build order lives in [server-build.md](server-build.md) (steps 1–10) for the server, and in
+[contract.md](contract.md) for the iOS behavior the server relies on.
 
-| # | Who | What | Done when |
-|---|---|---|---|
-| 1 | Joy | Fake phone CP1–CP2 (one request, then the once-a-second loop) | The loop runs and survives a server restart |
-| 2 | Joy | Fake phone CP3: mock walking data + `geo.py` | Positions move along the path in Google Maps |
-| 3 | Joy | `sessions.py` + `routing.py` in mock mode. A typed transcript (`--transcript "library"`) starts a trip. | `/update` returns `navigating` and the `route` once |
-| 4 | Joy | `guidance.py` checks 2, 4, 6, 7 (arrival and turns) | A clean mock walk speaks every turn and then "arrived", with no corrections |
-| 5 | Joy | Fake phone CP7 + `guidance.py` checks 1, 3, 5, 8 (corrections) | Detour → reroute, reverse → "Turn around", noise → silence |
-| 6 | Joy | Real `routing.py` (live place lookup and routes) | Typed destinations near the venue give real routes |
-| 7 | Joy | Grok: `grok_probe.py`, then the `/listen` relay ([voice-streaming.md](voice-streaming.md)) | The fake phone streams a clip and a trip starts |
-| S1 | Sophia | Background location + `/update` from the location delegate, speech, haptic patterns | A locked phone in a pocket keeps speaking the server's `say` |
-| S2 | Sophia | Mic + `/listen` client, tap to talk | Partials appear in the server log |
-| S3 | Sophia | Siri App Shortcut (see voice-streaming.md) | "Hey Siri, navigate with AcousticMaps" starts listening |
-| 8 | Both | Real walk over the tunnel with `RECORD_UPDATES=1` | A full trip works; keep the recording for replay as a demo backup |
+Sophia's order:
+1. Background location
+2. `heading_deg: null` instead of skipping updates
+3. `/events` client
+4. Map (`route_line`)
+5. Mic + `/listen`
+6. Siri shortcut
+7. Haptic patterns

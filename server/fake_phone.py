@@ -4,6 +4,7 @@ Run from server/:
   python fake_phone.py                                   # stand still
   python fake_phone.py --route mock/demo_route.json      # walk the route
   python fake_phone.py --route mock/demo_route.json --transcript "take me to the cafe" --at 2
+  python fake_phone.py --replay logs/<session>.jsonl --transcript "take me to Malott" --at 15
   python fake_phone.py --url https://xxx.trycloudflare.com
 While it runs, type a line and press Enter to "say" it to the server.
 """
@@ -45,6 +46,11 @@ def make_update(session_id, lat, lng, heading=0.0, course=0.0, speed=0.0, transc
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "transcript": transcript,
     }
+
+
+def load_replay(path):
+    with open(path) as f:
+        return [json.loads(line)["request"] for line in f if line.strip()]
 
 
 def walk_position(polyline, meters):
@@ -95,10 +101,12 @@ def main():
     parser.add_argument("--rate", type=float, default=1.0, help="updates per second")
     parser.add_argument("--route", help="route JSON file to walk, e.g. mock/demo_route.json")
     parser.add_argument("--speed", type=float, default=1.4, help="walking speed in m/s")
+    parser.add_argument("--replay", help="recorded walk to resend, e.g. logs/<session>.jsonl")
     parser.add_argument("--transcript", help="something to 'say' once, at tick --at")
     parser.add_argument("--at", type=int, default=2, help="tick number for --transcript")
     args = parser.parse_args()
 
+    replay = load_replay(args.replay) if args.replay else None
     polyline = None
     if args.route:
         with open(args.route) as f:
@@ -116,7 +124,11 @@ def main():
     with httpx.Client() as client:
         try:
             while True:
-                if polyline:
+                if replay:
+                    if tick >= len(replay):
+                        print(f"\n(end of replay, {len(replay)} ticks)")
+                        break
+                elif polyline:
                     pos, course, done = walk_position(polyline, walked)
                     speed = 0.0 if done else args.speed
                     heading = (course + random.uniform(-10, 10)) % 360  # phones wobble
@@ -135,8 +147,11 @@ def main():
                 if transcript:
                     print(f"\n  you said: {transcript!r}")
 
-                body = make_update(session_id, pos[0], pos[1], heading=heading,
-                                   course=course, speed=speed, transcript=transcript)
+                if replay:
+                    body = dict(replay[tick], session_id=session_id, transcript=transcript)
+                else:
+                    body = make_update(session_id, pos[0], pos[1], heading=heading,
+                                       course=course, speed=speed, transcript=transcript)
                 start = time.monotonic()
                 reply = post(client, args.url, body)
                 ms = (time.monotonic() - start) * 1000

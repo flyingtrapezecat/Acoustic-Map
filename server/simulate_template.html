@@ -1,0 +1,117 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Walk Simulation</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+ :root{--ok:#1a73e8;--off:#d93025;--back:#f29900;--arrived:#188038;--idle:#80868b}
+ body{margin:0;font:14px system-ui,sans-serif;display:flex;height:100vh;color:#202124}
+ #map{flex:1;position:relative}
+ #bubble{position:absolute;z-index:1000;left:50%;bottom:24px;transform:translateX(-50%);max-width:70%;
+   background:#202124;color:#fff;padding:10px 16px;border-radius:18px;font-size:16px;opacity:0;transition:opacity .3s}
+ #bubble.show{opacity:.95} #bubble b{color:#8ab4f8;margin-right:6px}
+ #side{width:360px;overflow:auto;border-left:1px solid #ddd;background:#fafafa;padding:12px}
+ h1{font-size:15px;margin:0 0 6px} h2{font-size:13px;margin:14px 0 4px;text-transform:uppercase;color:#5f6368}
+ .row{display:flex;gap:8px;align-items:center;margin:8px 0;flex-wrap:wrap} button{padding:6px 12px}
+ #readout{font:12px ui-monospace,monospace;white-space:pre;background:#fff;border:1px solid #ddd;padding:8px;border-radius:6px}
+ .item{padding:5px 6px;border-radius:5px;cursor:pointer;font-size:13px} .item:hover{background:#e8eaed}
+ .item.now{background:#d2e3fc} .t{color:#5f6368;font:12px ui-monospace,monospace;margin-right:6px}
+ .issue{border-left:4px solid var(--off)} .issue.back{border-left-color:var(--back)} .srv{color:#5f6368;font-size:12px}
+ .legend span{display:inline-flex;align-items:center;gap:4px;margin-right:10px;font-size:12px}
+ .dot{width:10px;height:10px;border-radius:50%;display:inline-block}
+</style></head><body>
+<div id="map"><div id="bubble"></div></div>
+<div id="side">
+ <h1 id="title"></h1>
+ <div class="legend"><span><i class="dot" style="background:var(--ok)"></i>on route</span><span><i class="dot" style="background:var(--off)"></i>off route</span><span><i class="dot" style="background:var(--back)"></i>wrong way</span><span><i class="dot" style="background:var(--idle)"></i>no trip / stale</span></div>
+ <div class="row"><button id="play">▶ Play</button>
+  <select id="speed"><option>1</option><option>2</option><option selected>5</option><option>10</option><option>30</option></select>×
+  <label><input type="checkbox" id="voice"> speak aloud</label></div>
+ <input id="scrub" type="range" min="0" value="0" style="width:100%">
+ <div id="readout"></div>
+ <h2>Problems</h2><div id="issues"></div>
+ <h2>What the server said</h2><div id="spoken"></div>
+</div>
+<script>
+const D = __DATA__, T = D.ticks;
+document.getElementById('title').textContent = D.title;
+const color = s => getComputedStyle(document.documentElement).getPropertyValue('--' + s).trim();
+const map = L.map('map');
+const street = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',
+  {maxZoom: 21, maxNativeZoom: 19, attribution: 'Tiles &copy; Esri'}).addTo(map);
+const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+  {maxZoom: 21, maxNativeZoom: 19, attribution: 'Imagery &copy; Esri'});
+L.control.layers({Street: street, Satellite: satellite}).addTo(map);
+const routeLine = L.polyline(D.route, {color: '#9aa0a6', weight: 7, opacity: .7}).addTo(map);
+const done = L.polyline([], {color: color('arrived'), weight: 7, opacity: .8}).addTo(map);
+D.turns.forEach((t, i) => L.circleMarker([t[0], t[1]], {radius: 8, color: '#e8710a', fillOpacity: .9})
+  .bindTooltip(`${i + 1}: ${t[2]} @ ${t[3]} m`).addTo(map));
+map.fitBounds(routeLine.getBounds().pad(0.3));
+
+const trail = T.map(t => L.circleMarker([t.lat, t.lng], {radius: 3, stroke: false, fillOpacity: 0}).addTo(map));
+T.forEach((t, i) => { if (t.say) L.circleMarker([t.lat, t.lng], {radius: 5, color: '#202124', weight: 1, fillColor: '#fff', fillOpacity: 1})
+  .bindTooltip(`${t.clock} ${t.say}`).on('click', () => go(i)).addTo(map); });
+const ring = L.circle([T[0].lat, T[0].lng], {radius: 1, color: color('ok'), weight: 1, fillOpacity: .08}).addTo(map);
+const me = L.circleMarker([T[0].lat, T[0].lng], {radius: 9, color: '#fff', weight: 3, fillOpacity: 1}).addTo(map);
+
+function along(d) {
+  const out = [D.route[0]];
+  for (let i = 1; i < D.route.length; i++) {
+    if (D.cum[i] <= d) { out.push(D.route[i]); continue; }
+    const f = (d - D.cum[i - 1]) / (D.cum[i] - D.cum[i - 1]), a = D.route[i - 1], b = D.route[i];
+    out.push([a[0] + f * (b[0] - a[0]), a[1] + f * (b[1] - a[1])]); break;
+  }
+  return out;
+}
+const tone = t => t.stale ? 'idle' : t.status === 'idle' ? 'idle' : t.status;
+
+const list = (el, items) => document.getElementById(el).innerHTML = items.join('') || '<div class="srv">none</div>';
+list('issues', D.issues.map(x => `<div class="item issue ${x.kind}" data-i="${x.from}">${x.title}<div class="srv">server said: ${x.server || '<b>nothing</b>'}</div></div>`));
+list('spoken', T.filter(t => t.say || t.heard).map(t => `<div class="item" data-i="${t.i}"><span class="t">${t.clock}</span>${t.heard ? '🎤 ' + t.heard + '<br>' : ''}${t.say ? (t.haptic ? '[' + t.haptic + '] ' : '') + t.say : ''}</div>`));
+document.querySelectorAll('.item').forEach(el => el.onclick = () => go(+el.dataset.i));
+
+let cur = 0, playing = false, lastSay = -1;
+const scrub = document.getElementById('scrub'); scrub.max = T.length - 1;
+function go(i, fromPlay) {
+  cur = Math.max(0, Math.min(T.length - 1, i));
+  const t = T[cur];
+  trail.forEach((m, k) => m.setStyle(k <= cur && k > cur - 300
+    ? {fillColor: color(tone(T[k])), fillOpacity: .25 + .6 * (1 - (cur - k) / 300)} : {fillOpacity: 0}));
+  me.setLatLng([t.lat, t.lng]).setStyle({fillColor: color(tone(t))});
+  ring.setLatLng([t.lat, t.lng]).setRadius(Math.max(1, t.acc));
+  done.setLatLngs(t.progress != null ? along(t.progress) : []);
+  let k = cur; while (k > 0 && !T[k].say && T[cur].t - T[k].t < 6) k--;
+  const b = document.getElementById('bubble');
+  if (T[k].say && T[cur].t - T[k].t < 6) { b.innerHTML = (T[k].haptic ? `<b>[${T[k].haptic}]</b>` : '') + T[k].say; b.classList.add('show'); }
+  else b.classList.remove('show');
+  if (fromPlay && t.say && cur !== lastSay && document.getElementById('voice').checked) {
+    speechSynthesis.cancel(); speechSynthesis.speak(new SpeechSynthesisUtterance(t.say));
+  }
+  if (t.say) lastSay = cur;
+  document.getElementById('readout').textContent =
+    `time      ${t.clock}  (+${t.t.toFixed(0)} s, tick ${t.i})\n` +
+    `state     ${t.state}${t.stale ? '  (stale fix)' : ''}\n` +
+    `accuracy  ${t.acc} m   speed ${t.speed} m/s\n` +
+    (t.progress != null
+      ? `progress  ${t.progress} m   (raw ${t.raw} m)\noff route ${t.off} m\nnext turn ${t.step + 1} in ${t.to_turn} m\nstatus    ${t.status}`
+      : 'no trip yet');
+  scrub.value = cur;
+  document.querySelectorAll('.item').forEach(el => el.classList.toggle('now', +el.dataset.i <= cur && +el.dataset.i > cur - 4));
+}
+let last = null, acc = 0;
+function frame(ts) {
+  if (!playing) { last = null; return; }
+  if (last !== null) {
+    acc += (ts - last) / 1000 * +document.getElementById('speed').value;
+    while (cur < T.length - 1 && T[cur + 1].t - T[cur].t <= acc) { acc -= T[cur + 1].t - T[cur].t; go(cur + 1, true); }
+    if (cur >= T.length - 1) toggle(false);
+  }
+  last = ts; requestAnimationFrame(frame);
+}
+function toggle(on) {
+  playing = on; document.getElementById('play').textContent = on ? '❚❚ Pause' : '▶ Play';
+  if (on) { if (cur >= T.length - 1) go(0); acc = 0; requestAnimationFrame(frame); }
+}
+document.getElementById('play').onclick = () => toggle(!playing);
+scrub.oninput = e => go(+e.target.value);
+go(0);
+</script></body></html>

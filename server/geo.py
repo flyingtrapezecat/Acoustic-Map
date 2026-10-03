@@ -52,7 +52,7 @@ def cumulative_m(polyline):
     return cum
 
 
-def locate(p, polyline, cum, lo=0.0, hi=math.inf):
+def locate(p, polyline, cum, lo=0.0, hi=math.inf, prefer=None):
     """Snap p onto the polyline, looking only at the stretch between lo and hi meters along it.
     Returns (along_m, off_m, seg_i): how far along the route the snapped point is,
     how far p is from it, and which segment it's on."""
@@ -64,7 +64,7 @@ def locate(p, polyline, cum, lo=0.0, hi=math.inf):
         y = math.radians(q[0] - p[0]) * EARTH_R
         return x, y
 
-    best = (0.0, math.inf, 0)
+    best, best_score = (0.0, math.inf, 0), math.inf
     for i in range(len(polyline) - 1):
         seg_len = cum[i + 1] - cum[i]
         if seg_len == 0 or cum[i + 1] < lo or cum[i] > hi:
@@ -76,6 +76,10 @@ def locate(p, polyline, cum, lo=0.0, hi=math.inf):
         t_hi = min(1.0, (hi - cum[i]) / seg_len)          # and inside the window
         t = max(t_lo, min(t_hi, t))
         off = math.hypot(x1 + t * dx, y1 + t * dy)
-        if off < best[1]:
-            best = (cum[i] + t * seg_len, off, i)
+        along = cum[i] + t * seg_len
+        score = off
+        if prefer is not None:
+            score += 0.2 * max(0.0, along - prefer - 5)  # 1 m of penalty per 5 m jumped ahead
+        if score < best_score:
+            best, best_score = (along, off, i), score
     return best

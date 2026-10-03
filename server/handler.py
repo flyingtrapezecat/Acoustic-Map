@@ -8,7 +8,8 @@ import routing
 import sessions
 from models import UpdateResponse
 
-DEDUPE_S = 10  # don't repeat the same guidance sentence within this many seconds
+DEDUPE_S = 10
+MAX_ACCURACY_M = 30
 
 
 def handle_update(req, transcript=None):
@@ -16,14 +17,20 @@ def handle_update(req, transcript=None):
     if req.lat is not None and req.lng is not None:
         s["pos"] = (req.lat, req.lng)
     s["accuracy"], s["heading"] = req.accuracy_m, req.heading_deg
-    s["course"], s["speed"] = req.course_deg, req.speed_mps
+    s["course"], s["speed"] = known(req.course_deg), known(req.speed_mps)
+
+    # same timestamp = the phone re-sent its last fix
+    fresh = req.timestamp is None or req.timestamp != s["last_fix_ts"]
+    s["last_fix_ts"] = req.timestamp
+    usable = (fresh and s["pos"] is not None
+              and (s["accuracy"] is None or s["accuracy"] <= MAX_ACCURACY_M))
 
     haptic = None
     if transcript:
-        say, haptic = handle_speech(s, transcript)       # the user asked: always answer
+        say, haptic = handle_speech(s, transcript)
     elif s["is_new"]:
         say = "Connected. Tap anywhere and say where you'd like to go."
-    elif s["state"] in ("navigating", "off_route"):
+    elif s["state"] in ("navigating", "off_route") and usable:
         say, haptic = guidance.next_instruction(s)
         if say and is_repeat(s, say):
             say, haptic = None, None
@@ -41,6 +48,11 @@ def handle_update(req, transcript=None):
         s["send_route"] = False
 
     return UpdateResponse(say=say, haptic=haptic, state=s["state"], route=route)
+
+
+def known(value):
+    """iOS sends -1 for unknown course/speed."""
+    return None if value is None or value < 0 else value
 
 
 def is_repeat(s, say):
@@ -64,8 +76,9 @@ def handle_speech(s, transcript):
         if s["route"] is None or s["pos"] is None:
             return "You're not navigating right now. Tap and say where you'd like to go.", None
         dest = s["route"]["destination"]
-        meters = geo.distance_m(s["pos"], (dest["lat"], dest["lng"]))
-        return f"{dest['name']} is about {round_m(meters)} meters away.", None
+        if s["state"] == "arrived":
+            return f"You're at {dest['name']}.", None
+        return f"{guidance.round_m(guidance.remaining_m(s))} meters to {dest['name']}.", None
 
     # action == "go"
     if s["pos"] is None:
@@ -79,15 +92,9 @@ def handle_speech(s, transcript):
 
 
 def start_sentence(s, route):
-    """'Starting route to Demo Cafe, 240 meters. The route starts at your 3 o'clock.'"""
-    say = f"Starting route to {route['destination']['name']}, {round_m(route['distance_m'])} meters."
+    say = f"Starting route to {route['destination']['name']}, {guidance.round_m(route['distance_m'])} meters."
     poly = route["polyline"]
     if s["heading"] is not None and len(poly) >= 2:
         hour = geo.clock_face(s["heading"], geo.bearing_deg(poly[0], poly[1]))
         say += " Walk straight ahead." if hour == 12 else f" The route starts at your {hour} o'clock."
     return say
-
-
-def round_m(meters):
-    """Speak distances in tens: 237 -> 240."""
-    return int(round(meters / 10) * 10)
