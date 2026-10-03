@@ -4,6 +4,7 @@ struct ContentView: View {
     @ObservedObject var connection: ConnectionTest
     @StateObject private var locationReader = LocationReader()
     @State private var tripActive = false
+    @StateObject private var voice = VoiceStream()
 
     var body: some View {
         ScrollView {
@@ -26,6 +27,33 @@ struct ContentView: View {
                     }
 
                 Text(locationReader.status)
+                
+                Button {
+                    Task {
+                        await voice.startListening(connection: connection)
+                    }
+                } label: {
+                    Image(systemName: "mic.fill")
+                        .font(.system(size: 30))
+                        .frame(width: 84, height: 84)
+                }
+                .buttonStyle(.borderedProminent)
+                .buttonBorderShape(.circle)
+                .disabled(voice.isActive || voice.isPreparing)
+                .accessibilityLabel("Speak destination")
+
+                Text(voice.status)
+
+                if !voice.partialText.isEmpty {
+                    Text(voice.partialText)
+                        .textSelection(.enabled)
+                }
+
+                if let error = voice.errorMessage {
+                    Text("Voice error: \(error)")
+                        .foregroundStyle(.red)
+                        .textSelection(.enabled)
+                }
 
                 if let fix = locationReader.location {
                     VStack(alignment: .leading, spacing: 8) {

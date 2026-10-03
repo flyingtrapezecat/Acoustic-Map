@@ -14,6 +14,9 @@ final class VoiceStream: ObservableObject {
     @Published private(set) var partialText = ""
     @Published private(set) var status = "Ready to talk."
     @Published private(set) var errorMessage: String?
+    @Published private(set) var isPreparing = false
+    private let microphone = MicrophoneCapture()
+    private var uploadTask: Task<Void, Never>?
 
     // We will connect this to microphone cleanup next.
     var onStop: (() -> Void)?
@@ -22,7 +25,54 @@ final class VoiceStream: ObservableObject {
     private var socket: URLSessionWebSocketTask?
     private var receiveTask: Task<Void, Never>?
     private var timeoutTask: Task<Void, Never>?
+    
+    func startListening(connection: ConnectionTest) async {
+        guard !isActive, !isPreparing else { return }
 
+        isPreparing = true
+        errorMessage = nil
+        defer { isPreparing = false }
+
+        guard await microphone.requestPermission() else {
+            errorMessage = "Microphone permission is denied. Enable it in Settings."
+            return
+        }
+        guard !Task.isCancelled else { return }
+
+        // This stops app speech before microphone capture starts.
+        start(connection: connection)
+        guard isActive else { return }
+
+        do {
+            let audio = try microphone.start()
+
+            uploadTask = Task { [weak self] in
+                guard let self else { return }
+                var pending = Data()
+
+                do {
+                    for try await bytes in audio {
+                        guard !Task.isCancelled, isActive else { return }
+                        pending.append(bytes)
+
+                        // 100 ms of 16 kHz mono PCM16 = 3,200 bytes.
+                        while pending.count >= 3_200 {
+                            guard !Task.isCancelled, isActive else { return }
+                            let frame = Data(pending.prefix(3_200))
+                            pending.removeFirst(3_200)
+                            try await sendAudio(frame)
+                        }
+                    }
+                } catch {
+                    guard !Task.isCancelled, isActive else { return }
+                    fail(error.localizedDescription)
+                }
+            }
+        } catch {
+            fail(error.localizedDescription)
+        }
+    }
+    
     func start(connection: ConnectionTest) {
         guard !isActive else { return }
 
@@ -36,7 +86,6 @@ final class VoiceStream: ObservableObject {
             return
         }
 
-        // Use the same address and session as location updates.
         address.scheme = "wss"
         address.path = "/listen"
         address.queryItems = [
@@ -76,14 +125,18 @@ final class VoiceStream: ObservableObject {
         }
     }
 
-    // The microphone will call this with converted PCM audio.
+    // microphone will call this with converted PCM audio.
     func sendAudio(_ data: Data) async throws {
         guard isActive, let socket else { return }
         try await socket.send(.data(data))
     }
 
     func stop() {
-        // Stop microphone capture before allowing speech again.
+        // stop microphone capture before allowing speech again.
+        microphone.stop()
+        uploadTask?.cancel()
+        uploadTask = nil
+        
         onStop?()
 
         isActive = false
@@ -105,7 +158,7 @@ final class VoiceStream: ObservableObject {
         stop()
         errorMessage = message
 
-        // An audible fallback helps when the screen is not visible.
+        // audible fallback helps when the screen is not visible.
         connection?.handleReply(
             ServerReply(
                 say: "Sorry, I didn't catch that. Please try again.",
