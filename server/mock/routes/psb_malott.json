@@ -1,0 +1,155 @@
+{
+  "scenario": {
+    "tests": "Real campus route PSB -> Malott Hall from OpenStreetMap foot routing (routing.openstreetmap.de). Short legs: two turns 31 m apart at the start, and 44 m + 12 m legs at the end.",
+    "source": "OSRM foot profile, fetched 2026-10-03",
+    "expect": [
+      "5 turns announced in order",
+      "no false off-route on a clean walk",
+      "arrive near Malott path entrance"
+    ]
+  },
+  "destination": {
+    "name": "Malott Hall",
+    "lat": 42.448362,
+    "lng": -76.480095
+  },
+  "polyline": [
+    [
+      42.449626,
+      -76.481794
+    ],
+    [
+      42.449627,
+      -76.48195
+    ],
+    [
+      42.449624,
+      -76.482046
+    ],
+    [
+      42.449618,
+      -76.482173
+    ],
+    [
+      42.449552,
+      -76.482172
+    ],
+    [
+      42.449516,
+      -76.482173
+    ],
+    [
+      42.4493,
+      -76.482164
+    ],
+    [
+      42.448966,
+      -76.482145
+    ],
+    [
+      42.448728,
+      -76.48213
+    ],
+    [
+      42.448742,
+      -76.481204
+    ],
+    [
+      42.448755,
+      -76.480665
+    ],
+    [
+      42.448756,
+      -76.48062
+    ],
+    [
+      42.448673,
+      -76.480618
+    ],
+    [
+      42.448634,
+      -76.480632
+    ],
+    [
+      42.448606,
+      -76.48064
+    ],
+    [
+      42.448571,
+      -76.480639
+    ],
+    [
+      42.448464,
+      -76.480629
+    ],
+    [
+      42.448468,
+      -76.480524
+    ],
+    [
+      42.448468,
+      -76.480509
+    ],
+    [
+      42.44847,
+      -76.480097
+    ],
+    [
+      42.448448,
+      -76.480098
+    ],
+    [
+      42.448418,
+      -76.480097
+    ],
+    [
+      42.448362,
+      -76.480095
+    ]
+  ],
+  "distance_m": 342.9,
+  "steps": [
+    {
+      "lat": 42.449618,
+      "lng": -76.482173,
+      "turn": "left",
+      "street": "",
+      "distance_m": 31.2
+    },
+    {
+      "lat": 42.448728,
+      "lng": -76.48213,
+      "turn": "left",
+      "street": "",
+      "distance_m": 98.9
+    },
+    {
+      "lat": 42.448756,
+      "lng": -76.48062,
+      "turn": "right",
+      "street": "",
+      "distance_m": 124.3
+    },
+    {
+      "lat": 42.448464,
+      "lng": -76.480629,
+      "turn": "left",
+      "street": "",
+      "distance_m": 32.7
+    },
+    {
+      "lat": 42.44847,
+      "lng": -76.480097,
+      "turn": "right",
+      "street": "",
+      "distance_m": 43.8
+    },
+    {
+      "lat": 42.448362,
+      "lng": -76.480095,
+      "turn": "arrive",
+      "street": "",
+      "distance_m": 12
+    }
+  ]
+}

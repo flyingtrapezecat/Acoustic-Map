@@ -1,0 +1,25 @@
+{
+  "scenario": {
+    "tests": "Out-and-back: two right turns 10 m apart, and the return leg runs 10 m from the outbound leg. Stresses the windowed tracking (BACK_M=25, AHEAD_M_WINDOW=60).",
+    "expect": [
+      "'In 40 meters, turn right onto Cross Alley' at along ~40 m",
+      "turn 2 (right onto Back Street) is only 10 m after turn 1: 'now' for turn 1 then 'now' for turn 2, in order",
+      "progress never jumps to the return leg while walking out (the start of Back Street is 10 m from the outbound leg)",
+      "arrival only at the far end of the return leg (along ~170 m), NOT near the start, even though the destination is 10 m from the starting point; watch check 2 'within 12 m of the destination' firing on tick 1",
+      "no off_route, no wrong-way"
+    ]
+  },
+  "destination": {"name": "Turnaround Bench", "lat": 37.7749, "lng": -122.419286},
+  "polyline": [
+    [37.7749, -122.4194],
+    [37.775619, -122.4194],
+    [37.775619, -122.419286],
+    [37.7749, -122.419286]
+  ],
+  "distance_m": 169.9,
+  "steps": [
+    {"lat": 37.775619, "lng": -122.4194, "turn": "right", "street": "Cross Alley", "distance_m": 79.9},
+    {"lat": 37.775619, "lng": -122.419286, "turn": "right", "street": "Back Street", "distance_m": 10.0},
+    {"lat": 37.7749, "lng": -122.419286, "turn": "arrive", "street": "", "distance_m": 79.9}
+  ]
+}

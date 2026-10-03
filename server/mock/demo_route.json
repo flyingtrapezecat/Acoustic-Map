@@ -1,0 +1,15 @@
+{
+  "destination": {"name": "Demo Cafe", "lat": 37.776339, "lng": -122.41849},
+  "polyline": [
+    [37.7749,    -122.4194],
+    [37.775799,  -122.4194],
+    [37.775799,  -122.41849],
+    [37.776339,  -122.41849]
+  ],
+  "distance_m": 240,
+  "steps": [
+    {"lat": 37.775799, "lng": -122.4194,  "turn": "right",  "street": "Second Street", "distance_m": 100},
+    {"lat": 37.775799, "lng": -122.41849, "turn": "left",   "street": "Third Street",  "distance_m": 80},
+    {"lat": 37.776339, "lng": -122.41849, "turn": "arrive", "street": "",              "distance_m": 60}
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "scenario": {
+    "tests": "Spiral: four right turns. The last leg (Middle Walk) runs north 15 m from, and parallel to, the first leg (West Walk), and 15 m from East Walk.",
+    "expect": [
+      "four right turns announced in order (North Row, East Walk, South Row, Middle Walk), each once",
+      "on Middle Walk, progress stays on Middle Walk: no jump back to West Walk (15 m away, same direction)",
+      "no off_route: Middle Walk is the route, even though West Walk is close",
+      "arrival at along ~315 m"
+    ]
+  },
+  "destination": {"name": "Parallel Park", "lat": 37.77553, "lng": -122.419229},
+  "polyline": [
+    [37.7749, -122.4194],
+    [37.775619, -122.4194],
+    [37.775619, -122.419059],
+    [37.77472, -122.419059],
+    [37.77472, -122.419229],
+    [37.77553, -122.419229]
+  ],
+  "distance_m": 314.9,
+  "steps": [
+    {"lat": 37.775619, "lng": -122.4194, "turn": "right", "street": "North Row", "distance_m": 79.9},
+    {"lat": 37.775619, "lng": -122.419059, "turn": "right", "street": "East Walk", "distance_m": 30.0},
+    {"lat": 37.77472, "lng": -122.419059, "turn": "right", "street": "South Row", "distance_m": 100.0},
+    {"lat": 37.77472, "lng": -122.419229, "turn": "right", "street": "Middle Walk", "distance_m": 14.9},
+    {"lat": 37.77553, "lng": -122.419229, "turn": "arrive", "street": "", "distance_m": 90.1}
+  ]
+}

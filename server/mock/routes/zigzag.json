@@ -1,0 +1,31 @@
+{
+  "scenario": {
+    "tests": "Five alternating turns with 25 m legs, shorter than the 40 m 'ahead' distance.",
+    "expect": [
+      "turn 1 (right) gets 'In 40 meters' at along ~20 m and 'now' at ~50 m",
+      "turns 2-5 are closer than 40 m apart: the 'ahead' for turn N+1 can only come after turn N is passed; it should say the real distance or go straight to 'now', never announce a turn already behind",
+      "every turn gets exactly one 'now' (right, left, right, left, right) in order",
+      "no turn skipped, no turn announced twice, at most one say per tick",
+      "arrival at the end (along ~200 m); no corrections"
+    ]
+  },
+  "destination": {"name": "Zigzag Kiosk", "lat": 37.775553, "lng": -122.41801},
+  "polyline": [
+    [37.7749, -122.4194],
+    [37.775407, -122.419167],
+    [37.77533, -122.418899],
+    [37.775541, -122.418802],
+    [37.775465, -122.418535],
+    [37.775676, -122.418437],
+    [37.775553, -122.41801]
+  ],
+  "distance_m": 199.9,
+  "steps": [
+    {"lat": 37.775407, "lng": -122.419167, "turn": "right", "street": "Zag Street", "distance_m": 60.0},
+    {"lat": 37.77533, "lng": -122.418899, "turn": "left", "street": "Zig Lane", "distance_m": 25.1},
+    {"lat": 37.775541, "lng": -122.418802, "turn": "right", "street": "Zag Street", "distance_m": 25.0},
+    {"lat": 37.775465, "lng": -122.418535, "turn": "left", "street": "Zig Lane", "distance_m": 24.9},
+    {"lat": 37.775676, "lng": -122.418437, "turn": "right", "street": "Zag Street", "distance_m": 25.0},
+    {"lat": 37.775553, "lng": -122.41801, "turn": "arrive", "street": "", "distance_m": 39.9}
+  ]
+}

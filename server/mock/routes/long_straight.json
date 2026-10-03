@@ -1,0 +1,20 @@
+{
+  "scenario": {
+    "tests": "360 m with no turns: about 4 minutes at 1.4 m/s. Exercises reassurance (check 8, every 45 s of silence).",
+    "expect": [
+      "start sentence, then silence until 45 s later",
+      "'Still on route. ... meters' roughly every 45 s while walking at 1.4 m/s (about 5 times)",
+      "the meters in each reassurance go down",
+      "arrival at along ~348 m (12 m before the end); no turn instructions at all"
+    ]
+  },
+  "destination": {"name": "Far Fountain", "lat": 37.778138, "lng": -122.4194},
+  "polyline": [
+    [37.7749, -122.4194],
+    [37.778138, -122.4194]
+  ],
+  "distance_m": 360.0,
+  "steps": [
+    {"lat": 37.778138, "lng": -122.4194, "turn": "arrive", "street": "", "distance_m": 360.0}
+  ]
+}

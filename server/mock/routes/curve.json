@@ -1,0 +1,39 @@
+{
+  "scenario": {
+    "tests": "A smooth 90-degree right-hand arc (16 points, no turn instruction) followed by one real left turn. Distance-to-turn must be measured along the route, not straight-line.",
+    "expect": [
+      "no turn instruction anywhere on the arc (the arc vertices are not steps)",
+      "'In 40 meters, turn left onto Hill Street' at along ~113 m (40 m before the turn at ~153 m, partly on the arc)",
+      "'Turn left now onto Hill Street' at along ~143 m",
+      "arrival at along ~191 m; no off_route or wrong-way on the arc"
+    ]
+  },
+  "destination": {"name": "Curve Plaza", "lat": 37.77616, "lng": -122.418488},
+  "polyline": [
+    [37.7749, -122.4194],
+    [37.77535, -122.4194],
+    [37.775385, -122.419398],
+    [37.77542, -122.419391],
+    [37.775454, -122.41938],
+    [37.775488, -122.419365],
+    [37.77552, -122.419346],
+    [37.77555, -122.419323],
+    [37.775579, -122.419296],
+    [37.775605, -122.419266],
+    [37.775629, -122.419233],
+    [37.77565, -122.419197],
+    [37.775668, -122.419159],
+    [37.775683, -122.419118],
+    [37.775695, -122.419076],
+    [37.775704, -122.419033],
+    [37.775709, -122.418988],
+    [37.77571, -122.418943],
+    [37.77571, -122.418488],
+    [37.77616, -122.418488]
+  ],
+  "distance_m": 203.1,
+  "steps": [
+    {"lat": 37.77571, "lng": -122.418488, "turn": "left", "street": "Hill Street", "distance_m": 153.0},
+    {"lat": 37.77616, "lng": -122.418488, "turn": "arrive", "street": "", "distance_m": 50.0}
+  ]
+}
