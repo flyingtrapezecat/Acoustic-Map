@@ -1,0 +1,27 @@
+{
+  "scenario": {
+    "tests": "Happy path: one right turn, one left turn, arrival. Same shape as mock/demo_route.json.",
+    "expect": [
+      "'In 40 meters, turn right onto Second Street' at ~40 m before turn 1 (along ~60 m)",
+      "'Turn right now onto Second Street' at ~10 m before turn 1 (along ~90 m)",
+      "'Continue straight for 80 meters' after passing turn 1",
+      "'In 40 meters, turn left onto Third Street' at along ~140 m",
+      "'Turn left now onto Third Street' at along ~170 m",
+      "'You've arrived at Demo Cafe' within 12 m of the end (along ~228 m)",
+      "each sentence said once; no corrections (no off_route, no turn around)"
+    ]
+  },
+  "destination": {"name": "Demo Cafe", "lat": 37.776339, "lng": -122.41849},
+  "polyline": [
+    [37.7749, -122.4194],
+    [37.775799, -122.4194],
+    [37.775799, -122.41849],
+    [37.776339, -122.41849]
+  ],
+  "distance_m": 240.0,
+  "steps": [
+    {"lat": 37.775799, "lng": -122.4194, "turn": "right", "street": "Second Street", "distance_m": 100.0},
+    {"lat": 37.775799, "lng": -122.41849, "turn": "left", "street": "Third Street", "distance_m": 80.0},
+    {"lat": 37.776339, "lng": -122.41849, "turn": "arrive", "street": "", "distance_m": 60.0}
+  ]
+}

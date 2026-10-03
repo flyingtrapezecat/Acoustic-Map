@@ -3,6 +3,7 @@ load_dotenv()
 
 from fastapi import FastAPI
 
+import handler
 import log
 from models import UpdateRequest, UpdateResponse
 
@@ -15,7 +16,7 @@ def health():
 
 @app.post("/update")
 def update(req: UpdateRequest) -> UpdateResponse:
-    resp = UpdateResponse(say="Connected. Hello from the server.", state="idle")
+    resp = handler.handle_update(req, req.transcript)
     log.log_update(req, resp)
     return resp
 
