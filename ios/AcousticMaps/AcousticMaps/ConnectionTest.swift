@@ -3,16 +3,17 @@ import Combine
 import AVFoundation
 import CoreLocation
 
-// keep changes to screen values on main thread
+// Keep screen updates on the main thread.
 @MainActor
 final class ConnectionTest: ObservableObject {
     @Published var instruction = "Ready to test."
     @Published var rawReply = "No reply yet."
     @Published var errorMessage: String?
     @Published var isSending = false
+    @Published private(set) var isListening = false
 
-    // keep this object alive for whole app launch
-    private let sessionID = UUID().uuidString
+    // Location updates and voice streaming share this session.
+    let sessionID = UUID().uuidString
     private let speaker = AVSpeechSynthesizer()
 
     func sendFakeUpdate() async {
@@ -66,10 +67,10 @@ final class ConnectionTest: ObservableObject {
             return
         }
 
-
         do {
             let encoded = try JSONEncoder().encode(update)
 
+            // Grok handles transcripts on the server.
             var body = try JSONSerialization.jsonObject(with: encoded)
                 as? [String: Any] ?? [:]
             body["transcript"] = NSNull()
@@ -107,16 +108,39 @@ final class ConnectionTest: ObservableObject {
                 from: data
             )
 
-            if let sentence = reply.say,
-               !sentence.trimmingCharacters(
-                    in: .whitespacesAndNewlines
-               ).isEmpty {
-                instruction = sentence
-                try speak(sentence)
-            }
+            handleReply(reply)
         } catch {
-            // switching the trip off cancels its pending request.
+            // Turning the trip off cancels its pending request.
             guard !Task.isCancelled else { return }
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    func beginVoiceInput() {
+        // Block new speech before stopping the current sentence.
+        isListening = true
+        speaker.stopSpeaking(at: .immediate)
+    }
+
+    func endVoiceInput() {
+        isListening = false
+    }
+
+    // HTTP responses and voice replies use the same method.
+    func handleReply(_ reply: ServerReply) {
+        guard let sentence = reply.say,
+              !sentence.trimmingCharacters(
+                  in: .whitespacesAndNewlines
+              ).isEmpty else { return }
+
+        instruction = sentence
+
+        // Never speak while microphone capture is active.
+        guard !isListening else { return }
+
+        do {
+            try speak(sentence)
+        } catch {
             errorMessage = error.localizedDescription
         }
     }
@@ -124,11 +148,11 @@ final class ConnectionTest: ObservableObject {
     private func speak(_ sentence: String) throws {
         let audio = AVAudioSession.sharedInstance()
 
-        // speak even with the silent switch on and lower other audio
+        // Support recording and speech through the loudspeaker.
         try audio.setCategory(
-            .playback,
-            mode: .spokenAudio,
-            options: [.duckOthers]
+            .playAndRecord,
+            mode: .default,
+            options: [.defaultToSpeaker, .duckOthers]
         )
         try audio.setActive(true)
 
