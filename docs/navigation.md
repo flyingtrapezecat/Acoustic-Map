@@ -82,12 +82,12 @@ can draw it, but it never has to understand it.
 
 | Fake phone flag | Tests |
 |---|---|
-| `--route mock/demo_walk.json` (CP3) | Turn-ahead, turn-now, passed-turn, arrival |
+| `--route mock/demo_route.json` (CP3, walks its `polyline`) | Turn-ahead, turn-now, passed-turn, arrival |
 | `--noise 8` (CP7) | Bad GPS doesn't trigger false corrections |
 | `--detour-at 20` (CP7) | Off route, then reroute |
 | `--reverse-at 20` (CP7, new) | Wrong way → "Turn around" |
 
-`mock/demo_walk.json` should follow the same streets as `mock/demo_route.json`, so a clean walk
+The fake phone walks the same `polyline` that routing returns in mock mode, so a clean walk
 produces no corrections at all. That is the first thing to verify.
 
 ---
