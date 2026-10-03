@@ -2,6 +2,8 @@
 import time
 
 import geo
+import routing
+import sessions
 
 ARRIVE_M = 15
 NOW_M = 10
@@ -13,6 +15,19 @@ BACK_M = 25
 WINDOW_AHEAD_M = 60
 MAX_STEP_M = 20
 OFF_LIMIT_M = 20
+
+BACK_ON_M = 12
+BAD_TICKS = 3
+GOOD_TICKS = 2
+CORRECT_EVERY_S = (15, 30, 45)
+CLOSING_IN_M = 5
+MOVING_MPS = 0.5
+WRONG_WAY_BACK_M = 8
+FORWARD_AGAIN_M = 5
+WEAK_GPS_S = 10
+REROUTE_M = 40
+REROUTE_AFTER_S = 30
+REROUTE_EVERY_S = 15
 
 
 def turn_phrase(step):
@@ -62,8 +77,107 @@ def pass_turns(s):
     return passed
 
 
+def facing(s):
+    """Direction the user is going (course while walking), else where the phone points."""
+    if s["course"] is not None and (s["speed"] or 0) > MOVING_MPS:
+        return s["course"]
+    return s["heading"] if s["heading"] is not None else s["course"]
+
+
+def direction(s, bearing):
+    face = facing(s)
+    if face is None:
+        return f"to the {geo.compass_word(bearing)}"
+    return geo.relative_direction(face, bearing)
+
+
+def segment_bearing(s):
+    poly, i = s["route"]["polyline"], s["seg_i"]
+    return geo.bearing_deg(poly[i], poly[i + 1])
+
+
+def going_backward(s):
+    """Positions only: iOS course lags and repeats stale values at walking speed (walk 4)."""
+    return ((s["speed"] or 0) > MOVING_MPS and s["off_m"] <= OFF_LIMIT_M
+            and s["raw_along_m"] < s["progress_m"] - WRONG_WAY_BACK_M)
+
+
+def correction_say(s):
+    if s["correction"] == "back":
+        return "You're heading the wrong way. Turn around."
+    route = s["route"]
+    target = geo.point_at(route["polyline"], route["cum"], s["raw_along_m"])
+    return (f"You've left the route. The path is {direction(s, geo.bearing_deg(s['pos'], target))}, "
+            f"{round_m(s['off_m'])} meters.")
+
+
+def start_correction(s, kind):
+    now = time.monotonic()
+    s.update(correction=kind, state="off_route", correction_t=now, off_since_t=now,
+             good_ticks=0, bad_off=0, bad_wrong=0, min_raw_m=s["raw_along_m"],
+             correction_repeats=0, correction_off_m=s["off_m"])
+    return correction_say(s), "off_route"
+
+
+def correcting(s):
+    """While off route or going the wrong way: confirm recovery, reroute, or repeat the correction."""
+    now = time.monotonic()
+    s["min_raw_m"] = min(s["min_raw_m"], s["raw_along_m"])
+    if s["correction"] == "off":
+        ok = s["off_m"] <= BACK_ON_M
+    else:
+        ok = s["raw_along_m"] >= s["min_raw_m"] + FORWARD_AGAIN_M and s["off_m"] <= OFF_LIMIT_M
+    s["good_ticks"] = s["good_ticks"] + 1 if ok else 0
+
+    if s["good_ticks"] >= GOOD_TICKS:
+        s.update(correction=None, state="navigating", good_ticks=0, reassured_at_m=s["progress_m"])
+        heading_on = direction(s, segment_bearing(s))
+        then = "Keep going straight." if heading_on == "straight ahead" else f"Follow it {heading_on}."
+        return f"You're back on route. {then}", "tick"
+
+    if s["correction"] == "back" and s["off_m"] > OFF_LIMIT_M:
+        s["bad_off"] += 1
+        if s["bad_off"] >= BAD_TICKS:
+            return start_correction(s, "off")
+
+    if (s["correction"] == "off" and not routing.MOCK
+            and (s["off_m"] > REROUTE_M or now - s["off_since_t"] > REROUTE_AFTER_S)
+            and now - s["last_reroute_t"] > REROUTE_EVERY_S):
+        s["last_reroute_t"] = now
+        try:
+            route = routing.get_route(s["pos"], s["route"]["destination"])
+        except Exception:
+            route = None
+        if route:
+            sessions.start_trip(s, route)
+            return f"Finding a new route. {round_m(route['distance_m'])} meters to {route['destination']['name']}.", "tick"
+
+    wait = CORRECT_EVERY_S[min(s["correction_repeats"], len(CORRECT_EVERY_S) - 1)]
+    if now - s["correction_t"] < wait:
+        return None, None
+    s["correction_t"] = now
+    if s["correction"] == "off" and s["off_m"] < s["correction_off_m"] - CLOSING_IN_M:
+        s["correction_off_m"] = s["off_m"]  # heading back already: stay quiet
+        return None, None
+    s["correction_repeats"] += 1
+    s["correction_off_m"] = s["off_m"]
+    return correction_say(s), "off_route"
+
+
+def weak_gps(s):
+    """Called for fresh fixes too inaccurate to track. Says so once per weak spell."""
+    now = time.monotonic()
+    if s["weak_gps_since"] is None:
+        s["weak_gps_since"] = now
+    if not s["weak_said"] and now - s["weak_gps_since"] >= WEAK_GPS_S:
+        s["weak_said"] = True
+        return "GPS signal is weak. Keep going carefully.", None
+    return None, None
+
+
 def next_instruction(s):
     """(say, haptic) for this tick, or (None, None)."""
+    s["weak_gps_since"], s["weak_said"] = None, False
     track(s)
     passed = pass_turns(s)
 
@@ -75,8 +189,18 @@ def next_instruction(s):
 
     if (remaining_m(s) <= ARRIVE_M
             or geo.distance_m(s["pos"], (dest["lat"], dest["lng"])) <= ARRIVE_M):
-        s["state"] = "arrived"
+        s.update(state="arrived", correction=None)
         return f"You have arrived at {dest['name']}.", "arrived"
+
+    if s["correction"]:
+        return correcting(s)
+
+    s["bad_off"] = s["bad_off"] + 1 if s["off_m"] > OFF_LIMIT_M else 0
+    s["bad_wrong"] = s["bad_wrong"] + 1 if going_backward(s) else 0
+    if s["bad_off"] >= BAD_TICKS:
+        return start_correction(s, "off")
+    if s["bad_wrong"] >= BAD_TICKS:
+        return start_correction(s, "back")
 
     if step["turn"] != "arrive":
         if to_turn <= NOW_M and f"{key}:now" not in s["announced"]:

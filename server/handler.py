@@ -34,6 +34,8 @@ def handle_update(req, transcript=None):
         say, haptic = guidance.next_instruction(s)
         if say and is_repeat(s, say):
             say, haptic = None, None
+    elif s["state"] in ("navigating", "off_route") and fresh and s["pos"] is not None:
+        say, haptic = guidance.weak_gps(s)
     else:
         say = None
     s["is_new"] = False
@@ -109,6 +111,6 @@ def start_sentence(s, route):
     say = f"Starting route to {route['destination']['name']}, {guidance.round_m(route['distance_m'])} meters."
     poly = route["polyline"]
     if s["heading"] is not None and len(poly) >= 2:
-        hour = geo.clock_face(s["heading"], geo.bearing_deg(poly[0], poly[1]))
-        say += " Walk straight ahead." if hour == 12 else f" The route starts at your {hour} o'clock."
+        where = geo.relative_direction(s["heading"], geo.bearing_deg(poly[0], poly[1]))
+        say += " Walk straight ahead." if where == "straight ahead" else f" The route starts {where}."
     return say

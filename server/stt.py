@@ -12,8 +12,8 @@ import websockets
 
 URL = "wss://api.x.ai/v1/stt"
 SAMPLE_RATE = 16000
-FINALIZE_AFTER_S = 10
-GIVE_UP_AFTER_S = 15
+FINALIZE_AFTER_S = 8
+GIVE_UP_AFTER_S = 11
 
 
 async def transcribe(audio, on_partial, keyterms=()):

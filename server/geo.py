@@ -83,3 +83,32 @@ def locate(p, polyline, cum, lo=0.0, hi=math.inf, prefer=None):
         if score < best_score:
             best, best_score = (along, off, i), score
     return best
+
+
+def point_at(polyline, cum, along):
+    """The point `along` meters along the polyline."""
+    for i in range(len(polyline) - 1):
+        if along <= cum[i + 1]:
+            a, b = polyline[i], polyline[i + 1]
+            return move(a, bearing_deg(a, b), max(0.0, along - cum[i]))
+    return tuple(polyline[-1])
+
+
+def compass_word(bearing):
+    names = ["north", "north-east", "east", "south-east", "south", "south-west", "west", "north-west"]
+    return names[round(bearing / 45) % 8]
+
+
+def relative_direction(facing, bearing):
+    """Where `bearing` is for someone facing `facing`, in words that tolerate compass wobble."""
+    d = angle_diff(facing, bearing)
+    side = "right" if d > 0 else "left"
+    if abs(d) <= 30:
+        return "straight ahead"
+    if abs(d) <= 60:
+        return f"ahead, slightly to your {side}"
+    if abs(d) <= 120:
+        return f"to your {side}"
+    if abs(d) <= 150:
+        return f"behind you, to your {side}"
+    return "behind you"

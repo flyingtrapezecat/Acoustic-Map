@@ -22,11 +22,12 @@ Run these checks in order. **The first one that fires is what gets said this tic
 | # | Check | Condition (starting values; tune outdoors) | say / haptic |
 |---|---|---|---|
 | 0 | Mute | Session is `listening` or `thinking` | `null`. Never talk over the user. |
-| 1 | Bad GPS | `accuracy_m > 30` | Don't correct anything this tick. If it lasts 10 s, say "GPS signal is weak" once. |
-| 2 | Arrived | Within 12 m of the destination, or route progress within 12 m of the end | "You've arrived at Doe Library." / `arrived` → state `arrived` |
-| 3 | Off route | More than `max(20 m, 1.5 × accuracy)` from the nearby stretch of route, for 3 ticks in a row | "You've gone off the route. Finding a new one." / `off_route`, then reroute (at most once per 15 s) and send the new `route` |
+| 1 | Weak GPS | Fresh fixes with `accuracy_m > 30` for 10 s | "GPS signal is weak. Keep going carefully." (once per weak spell); those fixes don't move tracking |
+| 2 | Arrived | Within 15 m of the destination or the end of the route | "You have arrived at Malott Hall." / `arrived` → state `arrived` |
+| 3 | Off route | More than 20 m from the nearby stretch of route, for 3 fresh ticks | "You've left the route. The path is at your 8 o'clock, 20 meters." / `off_route`, state `off_route`; repeated every 15 s with the direction updated. With real routing: reroute if more than 40 m or more than 30 s |
 | 4 | Turn now | Within 10 m of the next turn, measured along the route | "Turn left now onto Bancroft Way." / `turn_left` or `turn_right` |
-| 5 | Wrong way | Walking (`speed_mps > 0.5`) and either moving backward along the route or `course_deg` more than 120° off the route's direction, for 3 ticks | "You're heading the wrong way. Turn around." / `off_route` |
+| 5 | Wrong way | Walking (`speed > 0.5`) and moving backward along the route (8 m or more behind progress) for 3 fresh ticks. iOS `course` is **not** used; it lagged and repeated stale values in walk 4 | "You're heading the wrong way. Turn around." / `off_route`; repeated every 15 s |
+| 5b | Back on route | While correcting: within 12 m of the route (or walking forward again) for 2 ticks | "You're back on route. The route continues at your 9 o'clock." / `tick` → state `navigating` |
 | 6 | Turn ahead | Within 40 m of the next turn, measured along the route, and not yet announced | "In 40 meters, turn left onto Bancroft Way." / `tick` |
 | 7 | Passed a turn | Route progress is past the turn. Progress only moves forward, so a passed turn is never announced again. | Move on to the next step. "Continue straight for 200 meters." / `tick` |
 | 8 | Reassurance | Nothing said for 45 s | "Still on route. 120 meters to the next turn." |
