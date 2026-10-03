@@ -28,6 +28,23 @@ Position updates stay on `POST /update` once a second. That contract is unchange
 One WebSocket handles one utterance. Opening it means "start listening"; the server closes it after
 the reply. Each tap opens a new socket, so there's no long-lived connection to keep alive.
 
+Voice is how a trip **starts** (or changes destination). The main feature, spoken turn-by-turn
+guidance and corrections during the walk, runs on `/update`. See [navigation.md](navigation.md).
+
+## Two ways to start listening
+
+1. **Tap anywhere** on the screen while the app is open.
+2. **"Hey Siri, navigate with AcousticMaps"**, for when the user is already walking with the phone
+   in a pocket.
+   - Sophia adds an App Intent (`StartListeningIntent`, `openAppWhenRun = true`) and an
+     `AppShortcutsProvider` with phrases containing `\(.applicationName)`.
+   - When it runs, the app speaks "Where to?" and opens `/listen` exactly as a tap would.
+   - Siri only launches the app; Grok still does all the transcription. App Shortcut phrases can't
+     capture free text like a destination anyway.
+   - Test this from the lock screen early. iOS may ask for Face ID before opening the app.
+
+The server can't tell which way listening started, and doesn't need to.
+
 ---
 
 ## Contract: `WS /listen?session_id=<uuid>`
@@ -92,18 +109,18 @@ Edge cases to handle:
 
 ---
 
-## Build order with checkpoints
+## Voice checkpoints
+
+The overall build order lives in [navigation.md](navigation.md). These are the voice-specific checkpoints within it.
 
 | # | Who | What | Done when |
 |---|---|---|---|
-| 1 | Joy | Fake phone CP1–CP2: one `/update`, then the once-a-second loop | The loop runs, prints only changes, and survives a server restart |
-| 2 | Joy | **Fake phone CP3: mock walking data.** `mock/demo_walk.json` waypoints near the venue, `geo.py` helpers, `--route --speed 1.4` | The uvicorn log shows lat/lng moving along the path, checked in Google Maps |
-| 3 | Joy | `sessions.py` plus a `handle_update(session, transcript)` refactor | `/update` returns `state` from the session; sending a transcript changes it |
-| 4 | Joy | `grok_probe.py`: stream a `say`-generated wav directly to Grok, without the server | Partial and final text prints for `say -o clip.wav --data-format=LEI16@16000 "take me to the library"` |
-| 5 | Joy | `/listen` relay plus `python fake_phone.py listen clip.wav`, run in a second terminal while the walk runs | The fake phone receives `ready` → `partial`s → `reply`. Meanwhile `/update` shows `listening`/`thinking`. |
-| 6 | Sophia | Mic capture plus the `/listen` client (can start now, in parallel with 1–5) | The phone's audio produces partials in the server log |
-| 7 | Both | Real phone over the cloudflared tunnel (`wss://`) | Tap, speak, hear the reply, while walking |
-| 8 | Joy | Hardening: timeout `Finalize`, empty transcript, disconnects, `keyterm` from nearby places | Bad inputs produce a spoken fallback, never silence |
+| V1 | Joy | `grok_probe.py`: stream a `say`-generated wav directly to Grok, without the server | Partial and final text prints for `say -o clip.wav --data-format=LEI16@16000 "take me to the library"` |
+| V2 | Joy | `/listen` relay plus `python fake_phone.py listen clip.wav`, run in a second terminal while the walk runs | The fake phone receives `ready` → `partial`s → `reply`. Meanwhile `/update` shows `listening`/`thinking`. |
+| V3 | Sophia | Mic capture plus the `/listen` client, tap to talk | The phone's audio produces partials in the server log |
+| V4 | Sophia | Siri App Shortcut opens the app and starts listening | "Hey Siri, navigate with AcousticMaps" → "Where to?" → partials in the server log |
+| V5 | Both | Real phone over the cloudflared tunnel (`wss://`) | Tap or Siri, speak, hear the reply, while walking |
+| V6 | Joy | Hardening: timeout `Finalize`, empty transcript, disconnects, `keyterm` from nearby places | Bad inputs produce a spoken fallback, never silence |
 
 Notes:
 - Read clips with Python's `wave` module, not by skipping 44 bytes. macOS `say` WAV files can have
