@@ -11,3 +11,4 @@ enum ServerConfig {
     static let baseURL =
         "https://maps-hunter-leadership-contrary.trycloudflare.com"
 }
+

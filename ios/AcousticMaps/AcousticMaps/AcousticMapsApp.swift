@@ -9,9 +9,12 @@ import SwiftUI
 
 @main
 struct AcousticMapsApp: App {
+    // keep one connection object for the app's lifetime
+    @StateObject private var connection = ConnectionTest()
+
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            ContentView(connection: connection)
         }
     }
 }
