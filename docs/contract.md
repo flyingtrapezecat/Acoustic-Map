@@ -7,7 +7,7 @@ Base URL: `https://<tunnel>.trycloudflare.com` (it changes if cloudflared restar
 |---|---|---|---|
 | `POST /update` | phone → server, reply back | once a second, always | **live** |
 | `WS /events?session_id=` | server → phone | keep open for the whole session | server step 7 |
-| `WS /listen?session_id=` | phone → server (audio), replies back | one socket per utterance (tap or Siri) | server step 8 |
+| `WS /listen?session_id=` | phone → server (audio), replies back | one socket per utterance (tap or Siri) | **live** (mock speech until the xAI key is set: any audio → "take me to Malott") |
 
 ## The reply shape (the same on all three channels)
 
@@ -54,7 +54,13 @@ because `/events` wasn't connected.
   the agent's answer after "thinking".
 - If the socket is down, nothing is lost: the message arrives on the next `/update` reply instead.
 
-## `WS /listen?session_id=` (server step 8)
+## `WS /listen?session_id=` (live)
+
+- **Test it before the mic works:** connect, send about 1.5 s of any PCM16 audio (even silence), and you get
+  `ready`, a `partial`, then a `reply` that starts the PSB → Malott trip.
+- **Use the same `session_id` as `/update`,** so the server knows where you are. Without a recent
+  `/update`, the reply is "I don't have your location yet."
+- **While the socket is open, `/update` replies with `state: "listening"` and `say: null`.**
 
 The full details are in [voice-streaming.md](voice-streaming.md). In short:
 

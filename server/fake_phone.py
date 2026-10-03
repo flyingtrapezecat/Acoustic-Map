@@ -6,18 +6,22 @@ Run from server/:
   python fake_phone.py --route mock/demo_route.json --transcript "take me to the cafe" --at 2
   python fake_phone.py --replay logs/<session>.jsonl --transcript "take me to Malott" --at 15
   python fake_phone.py --url https://xxx.trycloudflare.com
+  python fake_phone.py --listen clip.wav --session <id from a running fake phone>
 While it runs, type a line and press Enter to "say" it to the server.
 """
 import argparse
+import asyncio
 import json
 import random
 import sys
 import threading
 import time
 import uuid
+import wave
 from datetime import datetime, timezone
 
 import httpx
+import websockets
 
 import geo
 
@@ -66,6 +70,39 @@ def walk_position(polyline, meters):
     return last, geo.bearing_deg(polyline[-2], last), True
 
 
+async def listen(url, session_id, clip):
+    """Stream a 16 kHz mono WAV to /listen like the phone mic, then print what comes back."""
+    with wave.open(clip) as w:
+        if (w.getframerate(), w.getnchannels(), w.getsampwidth()) != (16000, 1, 2):
+            raise SystemExit("clip must be 16 kHz mono 16-bit, e.g. say -o clip.wav --data-format=LEI16@16000 'take me to Malott'")
+        frames = w.readframes(w.getnframes())
+    frames += bytes(2 * 16000 * 2)  # 2 s of silence so end-of-speech is detected
+    ws_url = url.replace("https://", "wss://").replace("http://", "ws://") + f"/listen?session_id={session_id}"
+
+    async with websockets.connect(ws_url) as ws:
+        async def send():
+            for i in range(0, len(frames), 3200):
+                await ws.send(frames[i:i + 3200])
+                await asyncio.sleep(0.1)
+            await ws.send(json.dumps({"type": "stop"}))
+
+        sender = asyncio.create_task(send())
+        try:
+            async for message in ws:
+                event = json.loads(message)
+                if event["type"] == "ready":
+                    print("  (listening)")
+                elif event["type"] == "partial":
+                    print(f"  ...{event['text']}")
+                elif event["type"] == "reply":
+                    print(f"[{event['state']}] {event.get('haptic') or ''} say: {event['say']}"
+                          + (f"  route: {len(event['route'])} turns" if event.get("route") else ""))
+                else:
+                    print(event)
+        finally:
+            sender.cancel()
+
+
 def post(client, url, body):
     """Send one update. Returns the reply dict, or None if anything went wrong."""
     try:
@@ -104,7 +141,13 @@ def main():
     parser.add_argument("--replay", help="recorded walk to resend, e.g. logs/<session>.jsonl")
     parser.add_argument("--transcript", help="something to 'say' once, at tick --at")
     parser.add_argument("--at", type=int, default=2, help="tick number for --transcript")
+    parser.add_argument("--listen", help="WAV clip to stream to /listen instead of walking")
+    parser.add_argument("--session", help="session id to speak for (with --listen)")
     args = parser.parse_args()
+
+    if args.listen:
+        asyncio.run(listen(args.url, args.session or str(uuid.uuid4()), args.listen))
+        return
 
     replay = load_replay(args.replay) if args.replay else None
     polyline = None
@@ -113,7 +156,7 @@ def main():
             polyline = json.load(f)["polyline"]
 
     session_id = str(uuid.uuid4())
-    print(f"session {session_id[:8]} -> {args.url}  (type + Enter to speak, Ctrl+C to stop)")
+    print(f"session {session_id} -> {args.url}  (type + Enter to speak, Ctrl+C to stop)")
     threading.Thread(target=read_typed_lines, daemon=True).start()
 
     prev = None

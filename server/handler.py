@@ -37,7 +37,21 @@ def handle_update(req, transcript=None):
     else:
         say = None
     s["is_new"] = False
+    return build_reply(s, say, haptic)
 
+
+def reply_to_speech(session_id, transcript):
+    """Answer a /listen utterance. Uses the position from the latest /update."""
+    s = sessions.get(session_id)
+    s["is_new"] = False
+    if transcript:
+        say, haptic = handle_speech(s, transcript)
+    else:
+        say, haptic = "Sorry, I didn't catch that.", None
+    return build_reply(s, say, haptic)
+
+
+def build_reply(s, say, haptic):
     if say:
         s["last_say"], s["last_say_t"] = say, time.monotonic()
 
