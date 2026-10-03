@@ -3,3 +3,4 @@ server/.env
 __pycache__/
 *.db
 .DS_Store
+server/logs
