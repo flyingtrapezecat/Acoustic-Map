@@ -1,6 +1,7 @@
 import Foundation
 import Combine
 import AVFoundation
+import CoreLocation
 
 // keep changes to screen values on main thread
 @MainActor
@@ -15,7 +16,44 @@ final class ConnectionTest: ObservableObject {
     private let speaker = AVSpeechSynthesizer()
 
     func sendFakeUpdate() async {
-        guard !isSending else { return }
+        let update = PhoneUpdate(
+            session_id: sessionID,
+            lat: 42.448,
+            lng: -76.485,
+            accuracy_m: 5,
+            heading_deg: 90,
+            course_deg: 90,
+            speed_mps: 1.2,
+            timestamp: ISO8601DateFormatter().string(from: Date()),
+            transcript: nil
+        )
+
+        await send(update)
+    }
+
+    func sendRealUpdate(
+        location: CLLocation,
+        heading: Double
+    ) async {
+        let update = PhoneUpdate(
+            session_id: sessionID,
+            lat: location.coordinate.latitude,
+            lng: location.coordinate.longitude,
+            accuracy_m: location.horizontalAccuracy,
+            heading_deg: heading,
+            course_deg: location.course,
+            speed_mps: location.speed,
+            timestamp: ISO8601DateFormatter().string(
+                from: location.timestamp
+            ),
+            transcript: nil
+        )
+
+        await send(update)
+    }
+
+    private func send(_ update: PhoneUpdate) async {
+        guard !isSending, !Task.isCancelled else { return }
 
         isSending = true
         errorMessage = nil
@@ -28,17 +66,6 @@ final class ConnectionTest: ObservableObject {
             return
         }
 
-        let update = PhoneUpdate(
-            session_id: sessionID,
-            lat: 42.448,
-            lng: -76.485,
-            accuracy_m: 5,
-            heading_deg: 90,
-            course_deg: 90,
-            speed_mps: 1.2,
-            timestamp: ISO8601DateFormatter().string(from: Date()),
-            transcript: nil
-        )
 
         do {
             let encoded = try JSONEncoder().encode(update)
@@ -88,6 +115,8 @@ final class ConnectionTest: ObservableObject {
                 try speak(sentence)
             }
         } catch {
+            // switching the trip off cancels its pending request.
+            guard !Task.isCancelled else { return }
             errorMessage = error.localizedDescription
         }
     }

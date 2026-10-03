@@ -1,10 +1,3 @@
-//
-//  ServerModels.swift
-//  AcousticMaps
-//
-//  Created by Sophia Lu on 10/3/26.
-//
-
 import Foundation
 
 // data phone sends to POST/update

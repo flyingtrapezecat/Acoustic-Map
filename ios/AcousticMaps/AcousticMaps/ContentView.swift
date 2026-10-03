@@ -2,6 +2,8 @@ import SwiftUI
 
 struct ContentView: View {
     @ObservedObject var connection: ConnectionTest
+    @StateObject private var locationReader = LocationReader()
+    @State private var tripActive = false
 
     var body: some View {
         ScrollView {
@@ -13,8 +15,59 @@ struct ContentView: View {
                 Text(connection.instruction)
                     .font(.title2)
 
+                Toggle("Trip Active", isOn: $tripActive)
+                    .accessibilityLabel("Trip active")
+                    .onChange(of: tripActive) { _, active in
+                        if active {
+                            locationReader.start()
+                        } else {
+                            locationReader.stop()
+                        }
+                    }
+
+                Text(locationReader.status)
+
+                if let fix = locationReader.location {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Latitude: \(fix.coordinate.latitude)")
+                        Text("Longitude: \(fix.coordinate.longitude)")
+                        Text("Accuracy: \(fix.horizontalAccuracy) meters")
+
+                        // Check whether fresh readings are arriving.
+                        Text(
+                            "Reading time: \(fix.timestamp.formatted(date: .omitted, time: .standard))"
+                        )
+
+                        if let source = fix.sourceInformation {
+                            Text(
+                                "Simulated: \(source.isSimulatedBySoftware ? "Yes" : "No")"
+                            )
+                        } else {
+                            Text("Simulated: unknown")
+                        }
+
+                        if let heading = locationReader.headingDegrees {
+                            Text("Heading: \(heading) degrees")
+                        } else {
+                            Text("Heading: unavailable")
+                        }
+
+                        if fix.course >= 0 {
+                            Text("Course: \(fix.course) degrees")
+                        } else {
+                            Text("Course: unavailable")
+                        }
+
+                        if fix.speed >= 0 {
+                            Text("Speed: \(fix.speed) meters per second")
+                        } else {
+                            Text("Speed: unavailable")
+                        }
+                    }
+                    .font(.body.monospacedDigit())
+                }
+
                 Button {
-                    // waits for server without freezing the screen
                     Task {
                         await connection.sendFakeUpdate()
                     }
@@ -47,6 +100,33 @@ struct ContentView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
             .padding()
+        }
+        
+        .task(id: tripActive) {
+            guard tripActive else { return }
+
+            let clock = ContinuousClock()
+
+            while !Task.isCancelled {
+                let nextTick = clock.now.advanced(by: .seconds(1))
+
+                if let fix = locationReader.location,
+                   let heading = locationReader.headingDegrees {
+                    await connection.sendRealUpdate(
+                        location: fix,
+                        heading: heading
+                    )
+                }
+
+                do {
+                    try await Task.sleep(
+                        until: nextTick,
+                        clock: clock
+                    )
+                } catch {
+                    break
+                }
+            }
         }
     }
 }

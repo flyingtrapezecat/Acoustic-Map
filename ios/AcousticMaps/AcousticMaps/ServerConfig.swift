@@ -1,10 +1,3 @@
-//
-//  ServerConfig.swift
-//  AcousticMaps
-//
-//  Created by Sophia Lu on 10/3/26.
-//
-
 import Foundation
 enum ServerConfig {
     //Update this address when the tunnel restarts.
