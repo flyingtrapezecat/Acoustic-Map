@@ -19,6 +19,7 @@ struct ServerReply: Codable {
     let haptic: String?
     let state: String?
     let route: [RoutePoint]?
+    var route_line: [[Double]]? = nil
 }
 
 struct RoutePoint: Codable {

@@ -1,9 +1,28 @@
 import Foundation
 @preconcurrency import AVFoundation
 
+enum AcousticAudioSession {
+    static func configureAndActivate() throws {
+        let audio = AVAudioSession.sharedInstance()
+        try audio.setCategory(
+            .playAndRecord,
+            mode: .default,
+            options: [.defaultToSpeaker, .allowBluetooth, .duckOthers]
+        )
+        try audio.setActive(true)
+    }
+
+    static func deactivate() {
+        try? AVAudioSession.sharedInstance().setActive(
+            false,
+            options: .notifyOthersOnDeactivation
+        )
+    }
+}
+
 @MainActor
 final class MicrophoneCapture {
-    private let engine = AVAudioEngine()
+    private var engine = AVAudioEngine()
     private var tapInstalled = false
     private var continuation:
         AsyncThrowingStream<Data, Error>.Continuation?
@@ -12,16 +31,13 @@ final class MicrophoneCapture {
         await AVAudioApplication.requestRecordPermission()
     }
 
-    func start() throws -> AsyncThrowingStream<Data, Error> {
+    func start(
+        onLevel: @escaping @MainActor @Sendable (Double, Double) -> Void
+    ) throws -> AsyncThrowingStream<Data, Error> {
         stop()
 
-        let audio = AVAudioSession.sharedInstance()
-        try audio.setCategory(
-            .playAndRecord,
-            mode: .measurement,
-            options: [.defaultToSpeaker, .duckOthers]
-        )
-        try audio.setActive(true)
+        try AcousticAudioSession.configureAndActivate()
+        engine = AVAudioEngine()
 
         let input = engine.inputNode
         let inputFormat = input.outputFormat(forBus: 0)
@@ -57,6 +73,15 @@ final class MicrophoneCapture {
                 if let bytes = try Self.convert(
                     buffer, using: converter, to: outputFormat
                 ) {
+                    let inputPeak = Self.peak(buffer)
+                    let pcmPeak = bytes.withUnsafeBytes { raw in
+                        raw.bindMemory(to: Int16.self).reduce(0.0) {
+                            max($0, abs(Double($1)) / 32_768)
+                        }
+                    }
+                    Task { @MainActor in
+                        onLevel(inputPeak, pcmPeak)
+                    }
                     if case .dropped = output.yield(bytes) {
                         output.finish(
                             throwing: Self.failure("Audio upload is too slow.")
@@ -80,6 +105,34 @@ final class MicrophoneCapture {
         return stream
     }
 
+    var inputRoute: String {
+        AVAudioSession.sharedInstance().currentRoute.inputs
+            .map(\.portName).joined(separator: ", ")
+    }
+
+    private nonisolated static func peak(_ buffer: AVAudioPCMBuffer) -> Double {
+        var peak = 0.0
+        for channel in 0..<Int(buffer.format.channelCount) {
+            let dataChannel = buffer.format.isInterleaved ? 0 : channel
+            for frame in 0..<Int(buffer.frameLength) {
+                let index = frame * Int(buffer.stride)
+                    + (buffer.format.isInterleaved ? channel : 0)
+                let value: Double
+                if let samples = buffer.floatChannelData {
+                    value = Double(samples[dataChannel][index])
+                } else if let samples = buffer.int16ChannelData {
+                    value = Double(samples[dataChannel][index]) / 32_768
+                } else if let samples = buffer.int32ChannelData {
+                    value = Double(samples[dataChannel][index]) / 2_147_483_648
+                } else {
+                    continue
+                }
+                peak = max(peak, abs(value))
+            }
+        }
+        return peak
+    }
+
     func stop() {
         engine.stop()
         if tapInstalled {
@@ -88,6 +141,7 @@ final class MicrophoneCapture {
         }
         continuation?.finish()
         continuation = nil
+        AcousticAudioSession.deactivate()
     }
 
     // audio conversion runs on the microphone callback's thread
@@ -140,4 +194,3 @@ final class MicrophoneCapture {
         )
     }
 }
-
