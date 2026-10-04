@@ -1,9 +1,12 @@
 import SwiftUI
+import CoreLocation
 
 struct ContentView: View {
     @ObservedObject var connection: ConnectionTest
     @StateObject private var locationReader = LocationReader()
     @StateObject private var voice = VoiceStream()
+    @State private var events = EventStream()
+    @State private var offRouteShakes = 0
     @State private var destination = ""
     @State private var pendingCommand: String?
     @State private var showDiagnostics = false
@@ -62,9 +65,11 @@ struct ContentView: View {
                     destinationField
                     if isOnRoute {
                         guidancePanel
+                            .transition(.move(edge: .top).combined(with: .opacity))
                         RouteMapView(routeLine: connection.routeLine, turns: connection.route,
                                      location: locationReader.location)
                             .frame(height: max(220, min(geometry.size.height * 0.39, 340)))
+                            .transition(.scale(scale: 0.96).combined(with: .opacity))
                         HStack {
                             Text("Walking to \(connection.destinationName.isEmpty ? "your destination" : connection.destinationName)")
                                 .font(.system(.body, design: .rounded, weight: .bold))
@@ -79,8 +84,10 @@ struct ContentView: View {
                                     .background(.white, in: RoundedRectangle(cornerRadius: 22))
                                     .overlay(RoundedRectangle(cornerRadius: 22).stroke(Color("Ink"), lineWidth: 2.5))
                             }
-                            .disabled(connection.isSending || voice.isActive || voice.isPreparing || pendingCommand != nil)
+                            .buttonStyle(PressableButtonStyle())
+                            .disabled(voice.isActive || voice.isPreparing || pendingCommand != nil)
                         }
+                        .transition(.opacity)
                     } else {
                         Spacer(minLength: 24)
                         artwork
@@ -89,6 +96,7 @@ struct ContentView: View {
                         Text(currentState == "idle" ? "AcousticMaps" : currentState == "arrived" ? connection.instruction : stateLabel)
                             .font(.system(size: instructionSize, weight: .heavy, design: .rounded))
                             .multilineTextAlignment(.center)
+                            .contentTransition(.opacity)
                             .accessibilityAddTraits(.isHeader)
                         if currentState == "listening", !voice.partialText.isEmpty {
                             Text(voice.partialText)
@@ -113,6 +121,7 @@ struct ContentView: View {
                             .padding(12)
                             .frame(maxWidth: .infinity)
                             .background(Color("AlertGround"), in: RoundedRectangle(cornerRadius: 22))
+                            .transition(.move(edge: .bottom).combined(with: .opacity))
                     }
                     if locationReader.location == nil {
                         Text(locationReader.status)
@@ -127,6 +136,9 @@ struct ContentView: View {
                 .frame(minHeight: geometry.size.height, alignment: .top)
                 .frame(maxWidth: 520)
                 .frame(maxWidth: .infinity)
+                .animation(.spring(response: 0.45, dampingFraction: 0.85), value: isOnRoute)
+                .animation(.spring(response: 0.4, dampingFraction: 0.8), value: currentState)
+                .animation(.easeInOut(duration: 0.25), value: voice.errorMessage ?? connection.errorMessage)
             }
             .scrollDismissesKeyboard(.interactively)
         }
@@ -142,7 +154,12 @@ struct ContentView: View {
             pendingCommand = nil
             connection.errorMessage = "Location is unavailable. Check location permission and try again."
         }
+        .onChange(of: connection.state) { _, state in
+            if state == "off_route" { offRouteShakes += 1 }
+        }
+        .sensoryFeedback(.impact(weight: .medium), trigger: voice.isActive)
         .onAppear {
+            events.start(connection: connection)
             locationReader.onUpdate = { fix, heading in
                 guard !connection.isSending else { return }
                 let command = pendingCommand
@@ -163,6 +180,7 @@ struct ContentView: View {
                     .background(.white, in: RoundedRectangle(cornerRadius: 22))
                     .overlay(RoundedRectangle(cornerRadius: 22).stroke(Color("Ink"), lineWidth: 2.5))
             }
+            .buttonStyle(PressableButtonStyle())
             Spacer()
             if isOnRoute {
                 Label(gpsGood ? "GPS good" : "GPS weak", systemImage: "circle.fill")
@@ -174,6 +192,7 @@ struct ContentView: View {
                     .font(.title3)
                     .frame(width: 44, height: 44)
             }
+            .buttonStyle(PressableButtonStyle())
             .accessibilityLabel("Open diagnostics")
         }
     }
@@ -186,6 +205,9 @@ struct ContentView: View {
                 Image("CompassOpen").resizable().frame(width: width, height: width * 382 / 360)
                 Image(blobImage).resizable()
                     .frame(width: 157 * scale, height: 116 * scale)
+                    .id(blobImage)
+                    .transition(.scale(scale: 0.8).combined(with: .opacity))
+                    .modifier(Bobbing(amount: 5 * scale, fast: currentState == "thinking"))
                     .offset(x: 78 * scale, y: 165 * scale)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -202,20 +224,30 @@ struct ContentView: View {
         HStack(spacing: 12) {
             Image(blobImage).resizable().scaledToFit()
                 .frame(width: 100, height: 80)
+                .id(blobImage)
+                .transition(.scale(scale: 0.7).combined(with: .opacity))
+                .modifier(Bobbing(amount: 3, fast: currentState == "thinking"))
                 .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 6) {
                 Text(stateLabel.uppercased())
                     .font(.system(.subheadline, design: .rounded, weight: .bold))
                     .foregroundStyle(Color("Action"))
+                    .contentTransition(.opacity)
                 Text(displayedInstruction)
                     .font(.system(size: instructionSize, weight: .heavy, design: .rounded))
                     .fixedSize(horizontal: false, vertical: true)
+                    .contentTransition(.opacity)
+                    .animation(.easeInOut(duration: 0.3), value: displayedInstruction)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(16)
         .background(Color(currentState == "off_route" ? "AlertGround" : "CardGround"), in: RoundedRectangle(cornerRadius: 22))
         .overlay(RoundedRectangle(cornerRadius: 22).stroke(Color("Ink"), lineWidth: 2.5))
+        .animation(.easeInOut(duration: 0.3), value: currentState)
+        .phaseAnimator([0.0, -10, 10, -6, 6, 0], trigger: offRouteShakes) { view, x in
+            view.offset(x: x)
+        } animation: { _ in .spring(response: 0.12, dampingFraction: 0.5) }
         .accessibilityElement(children: .combine)
     }
 
@@ -233,8 +265,10 @@ struct ContentView: View {
                         .font(.title3.bold())
                         .frame(width: 44, height: 44)
                 }
+                .buttonStyle(PressableButtonStyle())
+                .transition(.scale.combined(with: .opacity))
                 .accessibilityLabel("Find walking route")
-                .disabled(connection.isSending || pendingCommand != nil || voice.isActive || voice.isPreparing)
+                .disabled(pendingCommand != nil || voice.isActive || voice.isPreparing)
             }
             Button {
                 searchFocused = false
@@ -247,10 +281,14 @@ struct ContentView: View {
                     .foregroundStyle(voice.isActive ? Color("Ink") : .white)
                     .background(Color(voice.isActive ? "CompassGold" : "Action"), in: Circle())
                     .overlay(Circle().stroke(Color("Ink"), lineWidth: 2))
+                    .background(ListeningRings(level: voice.level, active: voice.isActive, size: 44))
+                    .contentTransition(.symbolEffect(.replace))
             }
+            .buttonStyle(PressableButtonStyle())
             .accessibilityLabel(voice.isActive ? "Stop listening" : "Speak your destination")
-            .disabled(connection.isSending || pendingCommand != nil || voice.isPreparing)
+            .disabled(pendingCommand != nil || voice.isPreparing)
         }
+        .animation(.spring(response: 0.3, dampingFraction: 0.8), value: searchFocused)
         .padding(.leading, 16)
         .padding(.trailing, 4)
         .padding(.vertical, 6)
@@ -276,9 +314,12 @@ struct ContentView: View {
                 .foregroundStyle(voice.isActive ? Color("Ink") : .white)
                 .background(Color(voice.isActive ? "CompassGold" : "Action"), in: Circle())
                 .overlay(Circle().stroke(Color("Ink"), lineWidth: 2.5))
+                .background(ListeningRings(level: voice.level, active: voice.isActive, size: 84))
+                .overlay(ThinkingRing(active: currentState == "thinking", size: 84))
+                .contentTransition(.symbolEffect(.replace))
             }
-            .buttonStyle(.plain)
-            .disabled(voice.isActive || voice.isPreparing || pendingCommand != nil || connection.isSending)
+            .buttonStyle(PressableButtonStyle())
+            .disabled(voice.isActive || voice.isPreparing || pendingCommand != nil)
             .accessibilityLabel(voice.isActive ? "Listening" : "Speak destination or command")
         }
     }
@@ -378,6 +419,87 @@ struct ContentView: View {
                 }
             }
         }
+    }
+}
+
+/// Buttons press in slightly with a spring, so taps feel physical.
+struct PressableButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.93 : 1)
+            .opacity(configuration.isPressed ? 0.85 : 1)
+            .animation(.spring(response: 0.25, dampingFraction: 0.6), value: configuration.isPressed)
+    }
+}
+
+/// Rings around the mic button that swell with the voice level while listening.
+struct ListeningRings: View {
+    let level: Double
+    let active: Bool
+    let size: CGFloat
+    @State private var breathe = false
+
+    var body: some View {
+        ZStack {
+            ring(0)
+            ring(1)
+        }
+        .animation(.spring(response: 0.18, dampingFraction: 0.6), value: level)
+        .animation(.easeInOut(duration: 0.3), value: active)
+        .onAppear {
+            withAnimation(.easeInOut(duration: 0.9).repeatForever(autoreverses: true)) { breathe = true }
+        }
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+    }
+
+    private func ring(_ index: Int) -> some View {
+        let grow: CGFloat = 1.12 + CGFloat(index) * 0.18 + CGFloat(level) * 0.35 + (breathe ? 0.04 : 0)
+        let color: Color = Color("Action").opacity(index == 0 ? 0.45 : 0.25)
+        return Circle()
+            .stroke(color, lineWidth: 3)
+            .frame(width: size, height: size)
+            .scaleEffect(active ? grow : 1)
+            .opacity(active ? 1 : 0)
+    }
+}
+
+/// A spinning arc around the talk button while the server (or the agent) is thinking.
+struct ThinkingRing: View {
+    let active: Bool
+    let size: CGFloat
+    @State private var spin = false
+
+    var body: some View {
+        Circle()
+            .trim(from: 0, to: 0.28)
+            .stroke(Color("CompassGold"), style: StrokeStyle(lineWidth: 4, lineCap: .round))
+            .frame(width: size + 14, height: size + 14)
+            .rotationEffect(.degrees(spin ? 360 : 0))
+            .opacity(active ? 1 : 0)
+            .animation(.easeInOut(duration: 0.25), value: active)
+            .onAppear {
+                withAnimation(.linear(duration: 1).repeatForever(autoreverses: false)) { spin = true }
+            }
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
+    }
+}
+
+/// A gentle idle bob for the blob character (faster while thinking).
+struct Bobbing: ViewModifier {
+    let amount: CGFloat
+    let fast: Bool
+    @State private var up = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    func body(content: Content) -> some View {
+        content
+            .offset(y: reduceMotion ? 0 : (up ? -amount : amount))
+            .onAppear {
+                guard !reduceMotion else { return }
+                withAnimation(.easeInOut(duration: fast ? 0.5 : 1.4).repeatForever(autoreverses: true)) { up = true }
+            }
     }
 }
 

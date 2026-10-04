@@ -21,7 +21,7 @@ Every file stays small and has one job.
 | `guidance.py` | `next_instruction(session)`: the ordered checks table | steps 4–5 |
 | `push.py` | Server push: an outbox per session plus open `/events` sockets; `notify()` | step 7 |
 | `stt.py` | Streaming connection to Grok speech-to-text | step 8 |
-| `agent.py` | Grok agent: `reason(session, transcript)`, a tool loop over places, routes and trip status | step 9 |
+| `agent.py` | Gemini agent: `reason(session, transcript)`, a tool loop over places, routes and trip status | step 9 |
 | `fake_phone.py` | The mock iPhone (walk, replay, listen, events) | steps 1–2, 4–5, 7–8 |
 | `grok_probe.py` | A one-off script to test Grok STT on its own | step 8 |
 | `mock/demo_route.json`, `mock/routes/*.json` | Hand-made and real routes (`psb_malott.json` is the demo route) | step 2, route-lab |
@@ -279,11 +279,11 @@ starts the trip, and the walk terminal shows `listening` → `thinking` → `nav
 > **Cut line:** if streaming isn't working by about 1 AM, demo voice with typed or fake-phone
 > transcripts and keep debugging STT in the background.
 
-## Step 9: Grok agent (about 2 h)
+## Step 9: Gemini agent (about 2 h)
 
 See [agent.md](agent.md). `agent.reason(session, transcript)`:
 - Runs in a background thread so `/listen` can return its acknowledgement immediately.
-- Calls the xAI Responses API with function calling, for at most 4 tool rounds and within 8 s.
+- Calls Gemini with function calling (see agent.md), for at most 4 tool rounds and within 8 s.
 - Ends with one spoken reply through `push.notify`.
 
 On a timeout or error it falls back to step 3's plain `find_place` path, so the user always hears something.

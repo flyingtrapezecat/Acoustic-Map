@@ -35,7 +35,30 @@ final class MicrophoneCapture {
         onLevel: @escaping @MainActor @Sendable (Double, Double) -> Void
     ) throws -> AsyncThrowingStream<Data, Error> {
         stop()
+        // Bound the queue so a slow connection cannot fill memory (100 = 10 s of audio).
+        let (stream, output) =
+            AsyncThrowingStream<Data, Error>.makeStream(
+                bufferingPolicy: .bufferingOldest(100)
+            )
+        continuation = output
+        self.onLevel = onLevel
+        try startEngine(feeding: output)
+        return stream
+    }
 
+    /// Rebuild the engine but keep feeding the same stream. Used when the
+    /// microphone delivers pure silence (a stale input after an audio change).
+    func restart() throws {
+        guard let output = continuation else { return }
+        stopEngine()
+        try startEngine(feeding: output)
+    }
+
+    private var onLevel: (@MainActor @Sendable (Double, Double) -> Void)?
+
+    private func startEngine(
+        feeding output: AsyncThrowingStream<Data, Error>.Continuation
+    ) throws {
         try AcousticAudioSession.configureAndActivate()
         engine = AVAudioEngine()
 
@@ -57,13 +80,7 @@ final class MicrophoneCapture {
             throw Self.failure("Microphone format is unavailable.")
         }
 
-        // Bound the queue so a slow connection cannot fill memory.
-        let (stream, output) =
-            AsyncThrowingStream<Data, Error>.makeStream(
-                bufferingPolicy: .bufferingOldest(20)
-            )
-        continuation = output
-
+        let onLevel = self.onLevel
         input.installTap(
             onBus: 0,
             bufferSize: AVAudioFrameCount(inputFormat.sampleRate / 10),
@@ -79,8 +96,10 @@ final class MicrophoneCapture {
                             max($0, abs(Double($1)) / 32_768)
                         }
                     }
-                    Task { @MainActor in
-                        onLevel(inputPeak, pcmPeak)
+                    if let onLevel {
+                        Task { @MainActor in
+                            onLevel(inputPeak, pcmPeak)
+                        }
                     }
                     if case .dropped = output.yield(bytes) {
                         output.finish(
@@ -101,8 +120,6 @@ final class MicrophoneCapture {
             stop()
             throw error
         }
-
-        return stream
     }
 
     var inputRoute: String {
@@ -134,14 +151,20 @@ final class MicrophoneCapture {
     }
 
     func stop() {
+        stopEngine()
+        continuation?.finish()
+        continuation = nil
+        onLevel = nil
+        // The session stays active: switching it off and on between speech and
+        // the microphone is what left the input stale (silent) before.
+    }
+
+    private func stopEngine() {
         engine.stop()
         if tapInstalled {
             engine.inputNode.removeTap(onBus: 0)
             tapInstalled = false
         }
-        continuation?.finish()
-        continuation = nil
-        AcousticAudioSession.deactivate()
     }
 
     // audio conversion runs on the microphone callback's thread

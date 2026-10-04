@@ -48,6 +48,20 @@ KNOWN_PLACES = {
     ("willard", "straight"): {"name": "Willard Straight Hall", "lat": 42.446466, "lng": -76.485605},
 }
 MAX_DOORS = 4
+FILLER = {"a", "an", "the", "some", "somewhere", "place", "places", "to", "get", "i", "can", "nearest", "closest",
+          "near", "me", "any", "find", "where", "is", "go", "for", "of", "nearby", "good"}
+# kinds of place the agent can ask for, as OpenStreetMap tags
+CATEGORIES = {
+    ("coffee", "cafe", "café"): '[amenity=cafe][name]',
+    ("food", "eat", "lunch", "dinner", "restaurant", "hungry"): '[amenity~"^(restaurant|fast_food|cafe)$"][name]',
+    ("library", "libraries"): '[amenity=library][name]',
+    ("bathroom", "restroom", "toilet", "toilets"): '[amenity=toilets]',
+    ("water", "fountain"): '[amenity=drinking_water]',
+    ("bus", "stop"): '[highway=bus_stop]',
+    ("atm", "cash"): '[amenity=atm]',
+    ("pharmacy",): '[amenity=pharmacy]',
+    ("store", "grocery", "shop"): '[shop][name]',
+}
 
 _last_search_t = 0.0
 
@@ -61,10 +75,10 @@ def find_place(text, near):
     """Spoken destination -> {"name", "lat", "lng"}, or None if nothing matches."""
     if MOCK:
         return _load_mock()["destination"]
+    place = known_place(text)
+    if place:
+        return place
     words = set(re.sub(r"[^a-z0-9 ]", " ", text.lower()).split())
-    for alias, place in KNOWN_PLACES.items():
-        if set(alias) <= words:
-            return place
     key = [" ".join(sorted(words)), round(near[0], 2), round(near[1], 2)]  # same words, same ~1 km area
     place = cache.get("places", key)
     if place is None:
@@ -72,6 +86,64 @@ def find_place(text, near):
         if place:
             cache.put("places", key, place)
     return place
+
+
+def known_place(text):
+    """A demo destination named in the text ("take me to Olin"), or None."""
+    words = set(re.sub(r"[^a-z0-9 ]", " ", (text or "").lower()).split())
+    for alias, place in KNOWN_PLACES.items():
+        if set(alias) <= words:
+            return place
+    return None
+
+
+def search_places(query, near, radius_m=800, limit=5):
+    """Places matching a name or a kind of place ("coffee"), nearest first, for the agent.
+    Known demo places come first. Each: {name, lat, lng, category, distance_m, doors?}."""
+    known = known_place(query)
+    found = [dict(known, category="building", known=True)] if known else []
+    words = set(re.sub(r"[^a-z0-9 ]", " ", query.lower()).split()) - FILLER
+    tags = next((tag for keys, tag in CATEGORIES.items() if words & set(keys)), None)
+    kind_only = tags and all(any(w in keys for keys in CATEGORIES) for w in words)
+    lat, lng = round(near[0], 3), round(near[1], 3)  # rounded so nearby searches share the cache
+    selectors = [] if not words else [f"nwr(around:{radius_m},{lat},{lng}){tags}"] if kind_only else \
+        [f"nwr(around:{radius_m},{lat},{lng})" + "".join(f'[name~"{re.escape(w)}",i]' for w in sorted(words))] + \
+        ([f"nwr(around:{radius_m},{lat},{lng}){tags}"] if tags else [])
+    for selector in selectors:
+        for e in paths.overpass(f"[out:json][timeout:6];{selector};out center tags;", timeout=6, waits=(0,)) or []:
+            where = e.get("center") or e
+            if "lat" not in where:
+                continue
+            found.append({"name": e["tags"].get("name") or e["tags"].get("amenity", "place").replace("_", " "),
+                          "lat": where["lat"], "lng": where["lon"], "osm": [e["type"], e["id"]],
+                          "category": e["tags"].get("amenity") or e["tags"].get("shop")
+                                      or e["tags"].get("building") or "place"})
+        if len(found) > (1 if known else 0):
+            break
+    for place in found:
+        place["distance_m"] = round(geo.distance_m(near, (place["lat"], place["lng"])))
+    best = {}
+    for place in sorted(found, key=lambda p: (not p.get("known"), p["distance_m"])):
+        if place["distance_m"] <= radius_m * 1.5:
+            best.setdefault(place["name"], place)
+    return list(best.values())[:limit]
+
+
+def nearby(near, radius_m=60):
+    """Named buildings and places around the user, nearest first: [{name, lat, lng, distance_m}]."""
+    lat, lng = round(near[0], 4), round(near[1], 4)
+    elements = paths.overpass(f'[out:json][timeout:6];nwr(around:{radius_m},{lat},{lng})[name]'
+                              f'[~"^(building|amenity|shop|leisure|tourism)$"~"."];out center tags;',
+                              timeout=6, waits=(0,)) or []
+    best = {}
+    for e in elements:
+        where = e.get("center") or e
+        if "lat" in where:
+            d = round(geo.distance_m(near, (where["lat"], where["lon"])))
+            name = e["tags"]["name"]
+            if name not in best or d < best[name]["distance_m"]:
+                best[name] = {"name": name, "lat": where["lat"], "lng": where["lon"], "distance_m": d}
+    return sorted(best.values(), key=lambda p: p["distance_m"])
 
 
 def search(text, near):
@@ -111,9 +183,11 @@ def get_route(start, place, polish=True):
     if MOCK:
         return prepare(_load_mock())
     center = place.get("center") or [place["lat"], place["lng"]]
-    doors = place.get("doors") or [[place["lat"], place["lng"]]]
+    if "doors" not in place and place.get("osm"):
+        place["doors"] = doors(*place["osm"])
+    doors_ = place.get("doors") or [[place["lat"], place["lng"]]]
     best = None
-    for door in doors[:MAX_DOORS]:
+    for door in doors_[:MAX_DOORS]:
         dest = {"name": place["name"], "lat": door[0], "lng": door[1], "center": center}
         try:
             route = osrm_route(start, dest)

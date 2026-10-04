@@ -25,16 +25,10 @@ Base URL: `https://<tunnel>.trycloudflare.com` (it changes if cloudflared restar
 - **`route` and `route_line` are sent once,** when a trip starts or is rerouted. Otherwise they're
   null. Keep the last ones you received for the map.
 - `route` holds the turn points, and the last one has `turn: "arrive"`. `route_line` is the full
-<<<<<<< Updated upstream
   walking path, for drawing a `MapPolyline`. **`route_line` is live** (server step 6).
 - `turn` values: `left`, `right`, `slight_left`, `slight_right`, `sharp_left`, `sharp_right`, `uturn`,
   `arrive`, and the path features `stairs`, `archway`, `crossing` (new in step 6; draw them as plain
   points if you have no icon). `instruction` is the spoken wording for that point.
-=======
-  walking path, for drawing a `MapPolyline`. **`route_line` is live.**
-- Turn values include `left`, `right`, `arrive`, `stairs`, `archway`, `crossing`,
-  `slight_*`, `sharp_*`, and `uturn`. Draw unfamiliar values as plain route points.
->>>>>>> Stashed changes
 - **`say` is never repeated by the server,** so speak every non-null one you get.
 
 ## `POST /update` (live)

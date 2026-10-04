@@ -8,7 +8,29 @@ The Swift below is a sketch to show the shape, not code to paste as is.
 - Background location and speech while locked (`UIBackgroundModes`, `allowsBackgroundLocationUpdates`)
 - `heading_deg: null` instead of skipping updates
 - Haptic patterns for `turn_left`, `turn_right`, `off_route`, `arrived`, `tick`
-- `/listen` voice streaming (but see item 1)
+- `/listen` voice streaming
+- Route map from `route_line` with turn markers (Sophia, cb756e6)
+
+## Wired in by Joy + Claude (needs a test on the phone)
+Type-checked against the iOS SDK, but not run on a device. The Xcode here can't open the project's file
+format, so build it in your Xcode.
+- **Mic silence fix (item 1):**
+  - wait for speech to stop before the mic starts;
+  - the audio session stays active instead of being turned off after each utterance;
+  - a 10 s audio buffer;
+  - if the first 1.2 s is pure zeros, the mic engine is rebuilt once, and if it's still silent you get
+    "The microphone isn't picking up any sound."
+  - Files: `MicrophoneCapture.swift`, `VoiceStream.swift`, `ConnectionTest.swift`.
+- **`/events` push client (item 2):** new `EventStream.swift`, started in `ContentView.onAppear`. It reconnects after 1, 2, then every 4 s.
+- **Commands are no longer dropped:** typed or spoken commands wait for an in-flight `/update` instead of being silently skipped.
+- **Destination name** for spoken and agent trips, taken from "Starting route to X, …".
+- **UI polish:**
+  - Buttons press in with a spring, and no longer flicker disabled every second during `/update`.
+  - Spring transitions between idle, trip and arrived; the guidance panel and map slide in, and instructions cross-fade.
+  - Rings around the mic button follow the voice level, and a spinning ring shows while thinking.
+  - The blob bobs (and stays still with Reduce Motion), pops on a new expression, and the panel shakes when you go off route.
+  - The map shows the whole route for 4 s, then follows the walker heading-up. Panning stops following; the location button resumes it. The location dot pulses.
+- `import CoreLocation` added to `ContentView.swift`, which the strict import check (MemberImportVisibility) requires.
 
 ## 1. Microphone sends silence (blocking voice input)
 Every recording since about 19:26 is 100% zero samples, so Grok hears nothing and the reply is

@@ -7,6 +7,10 @@ struct RouteMapView: View {
     let location: CLLocation?
     @State private var camera: MapCameraPosition = .automatic
     @State private var cameraHeading = 0.0
+    // Show the whole route first, then follow the walker (until they pan the map).
+    @State private var routeShownAt = Date()
+    private let overviewSeconds = 4.0
+    private let followDistance = 350.0
 
     private var coordinates: [CLLocationCoordinate2D] {
         routeLine.compactMap { point in
@@ -39,10 +43,7 @@ struct RouteMapView: View {
             }
             if let location {
                 Annotation("Your location", coordinate: location.coordinate) {
-                    Circle()
-                        .fill(Color("CompassGold"))
-                        .frame(width: 22, height: 22)
-                        .overlay(Circle().stroke(Color("Ink"), lineWidth: 3))
+                    LocationDot()
                 }
                 .annotationTitles(.hidden)
             }
@@ -54,10 +55,13 @@ struct RouteMapView: View {
         }
         .overlay(alignment: .bottomTrailing) {
             Button {
-                if let location {
-                    camera = .camera(MapCamera(centerCoordinate: location.coordinate, distance: 600))
-                } else {
-                    camera = .automatic
+                withAnimation(.easeInOut(duration: 0.6)) {
+                    if let location {
+                        camera = .camera(MapCamera(centerCoordinate: location.coordinate,
+                                                   distance: followDistance, heading: cameraHeading))
+                    } else {
+                        camera = .automatic
+                    }
                 }
             } label: {
                 Image(systemName: "location.fill")
@@ -70,9 +74,24 @@ struct RouteMapView: View {
         }
         .clipShape(RoundedRectangle(cornerRadius: 22))
         .overlay(RoundedRectangle(cornerRadius: 22).stroke(Color("Ink"), lineWidth: 2.5))
-        .onChange(of: routeLine) { _, _ in camera = .automatic }
+        .onChange(of: routeLine) { _, _ in
+            routeShownAt = Date()
+            withAnimation(.easeInOut(duration: 0.8)) { camera = .automatic }
+        }
+        .onChange(of: location) { _, fix in follow(fix) }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("Walking route map with \(turns.count) route points.")
+    }
+
+    /// Keep the walker centered, heading-up while moving, unless they've panned the map.
+    private func follow(_ fix: CLLocation?) {
+        guard let fix, !camera.positionedByUser,
+              Date().timeIntervalSince(routeShownAt) > overviewSeconds else { return }
+        let heading = fix.speed > 0.5 && fix.course >= 0 ? fix.course : cameraHeading
+        withAnimation(.easeInOut(duration: 0.9)) {
+            camera = .camera(MapCamera(centerCoordinate: fix.coordinate, distance: followDistance,
+                                       heading: heading))
+        }
     }
 
     private func symbol(for turn: RoutePoint) -> String {
@@ -96,5 +115,27 @@ struct RouteMapView: View {
         guard symbol(for: turn) == "arrow.up",
               let heading = markerHeading(for: turn) else { return 0 }
         return heading - cameraHeading
+    }
+}
+
+/// The walker's dot, with a soft pulse so it's easy to find on the map.
+private struct LocationDot: View {
+    @State private var pulse = false
+
+    var body: some View {
+        ZStack {
+            Circle()
+                .fill(Color("CompassGold").opacity(0.35))
+                .frame(width: 22, height: 22)
+                .scaleEffect(pulse ? 2.2 : 1)
+                .opacity(pulse ? 0 : 1)
+            Circle()
+                .fill(Color("CompassGold"))
+                .frame(width: 22, height: 22)
+                .overlay(Circle().stroke(Color("Ink"), lineWidth: 3))
+        }
+        .onAppear {
+            withAnimation(.easeOut(duration: 1.6).repeatForever(autoreverses: false)) { pulse = true }
+        }
     }
 }

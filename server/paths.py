@@ -23,15 +23,15 @@ SAME_SIDE_MIN, SAME_SIDE_MAX = 20, 170
 SIZE = {"steps": 1, "path": 1, "footway": 1, "pedestrian": 2, "cycleway": 2, "service": 3}  # anything else is a street
 
 
-def overpass(query):
+def overpass(query, timeout=15, waits=RETRY_WAITS_S):
     """Run an Overpass query, cached on disk. The public server refuses bursts, so retry a couple of times."""
     hit = cache.get("overpass", query)
     if hit is not None:
         return hit
-    for wait in RETRY_WAITS_S:
+    for wait in waits:
         time.sleep(wait)
         try:
-            r = httpx.post(OVERPASS_URL, data={"data": query}, headers=HEADERS, timeout=15)
+            r = httpx.post(OVERPASS_URL, data={"data": query}, headers=HEADERS, timeout=timeout)
             r.raise_for_status()
             elements = r.json()["elements"]
         except (httpx.HTTPError, ValueError):

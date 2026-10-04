@@ -71,6 +71,13 @@ final class ConnectionTest: ObservableObject {
     }
 
     private func send(_ update: PhoneUpdate) async {
+        // A location update goes out every second; a typed or spoken command must
+        // wait for it instead of being dropped.
+        if update.transcript != nil {
+            for _ in 0..<40 where isSending {
+                try? await Task.sleep(for: .milliseconds(50))
+            }
+        }
         guard !isSending, !Task.isCancelled else { return }
 
         isSending = true
@@ -146,6 +153,16 @@ final class ConnectionTest: ObservableObject {
         isListening = false
     }
 
+    /// Stop speech and give the speech engine time to release audio before the
+    /// microphone starts (starting during teardown gave silent recordings).
+    func waitForSpeechToStop() async {
+        speaker.stopSpeaking(at: .immediate)
+        for _ in 0..<20 where speaker.isSpeaking {
+            try? await Task.sleep(for: .milliseconds(50))
+        }
+        try? await Task.sleep(for: .milliseconds(150))
+    }
+
     // HTTP responses and voice replies use the same method
     func handleReply(_ reply: ServerReply) {
         let wasOnRoute = ["navigating", "off_route"].contains(state)
@@ -186,6 +203,13 @@ final class ConnectionTest: ObservableObject {
               !sentence.trimmingCharacters(
                   in: .whitespacesAndNewlines
               ).isEmpty else { return }
+
+        // Spoken and agent trips name the place only in the sentence.
+        let prefix = "Starting route to "
+        if sentence.hasPrefix(prefix),
+           let name = sentence.dropFirst(prefix.count).split(separator: ",").first {
+            destinationName = String(name)
+        }
 
         instruction = sentence
 

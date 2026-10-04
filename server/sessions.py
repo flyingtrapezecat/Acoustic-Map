@@ -20,6 +20,7 @@ def _new():
         "correction": None, "correction_t": 0.0, "off_since_t": 0.0, "good_ticks": 0,
         "min_raw_m": 0.0, "weak_said": False,
         "correction_repeats": 0, "correction_off_m": 0.0,
+        "before_agent": "idle", "agent_places": {},
     }
 
 
@@ -28,6 +29,7 @@ def get(session_id):
     key = session_id or "unknown"
     if key not in _sessions:
         _sessions[key] = _new()
+        _sessions[key]["id"] = key
     return _sessions[key]
 
 def start_trip(sesh, route):

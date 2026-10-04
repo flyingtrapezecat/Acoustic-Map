@@ -1,6 +1,7 @@
 """The brain: turns one /update (plus anything the user said) into what the phone should say and do."""
 import time
 
+import agent
 import commands
 import geo
 import guidance
@@ -58,14 +59,18 @@ def build_reply(s, say, haptic):
     if say:
         s["last_say"], s["last_say_t"] = say, time.monotonic()
 
-    route = route_line = None
-    if s["send_route"]:
-        route = [{"lat": st["lat"], "lng": st["lng"], "turn": st["turn"],
-                  "instruction": guidance.turn_phrase(st)} for st in s["route"]["steps"]]
-        route_line = [[round(lat, 6), round(lng, 6)] for lat, lng in s["route"]["polyline"]]
-        s["send_route"] = False
-
+    route, route_line = route_payload(s)
     return UpdateResponse(say=say, haptic=haptic, state=s["state"], route=route, route_line=route_line)
+
+
+def route_payload(s):
+    """(route, route_line) to send if the trip just started or changed, else (None, None)."""
+    if not s["send_route"] or s["route"] is None:
+        return None, None
+    s["send_route"] = False
+    route = [{"lat": st["lat"], "lng": st["lng"], "turn": st["turn"],
+              "instruction": guidance.turn_phrase(st)} for st in s["route"]["steps"]]
+    return route, [[round(lat, 6), round(lng, 6)] for lat, lng in s["route"]["polyline"]]
 
 
 def known(value):
@@ -101,6 +106,13 @@ def handle_speech(s, transcript):
     # action == "go"
     if s["pos"] is None:
         return "I don't have your location yet. Give me a moment and try again.", None
+    if not routing.known_place(arg) and agent.available():
+        # open-ended ("somewhere to get coffee", "I'm lost"): Gemini answers through push in a few seconds
+        s["before_agent"] = s["state"]
+        if s["state"] not in ("navigating", "off_route"):
+            s["state"] = "thinking"
+        agent.start(s["id"], transcript)
+        return "Okay, let me check.", None
     place = routing.find_place(arg, near=s["pos"])
     if place is None:
         return f"Sorry, I couldn't find {arg}.", None
