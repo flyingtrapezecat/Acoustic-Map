@@ -41,11 +41,20 @@ const street = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services
 const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
   {maxZoom: 21, maxNativeZoom: 19, attribution: 'Imagery &copy; Esri'});
 L.control.layers({Street: street, Satellite: satellite}).addTo(map);
-const routeLine = L.polyline(D.route, {color: '#9aa0a6', weight: 7, opacity: .7}).addTo(map);
+// every route the server sent (trip start + reroutes); earlier ones dashed once replaced
+const routeLines = D.routes.map(r => L.polyline(r.line, {color: '#9aa0a6', weight: 7, opacity: .7}).addTo(map));
+const turnLayers = D.routes.map(r => L.layerGroup(r.turns.map((t, i) =>
+  L.circleMarker([t[0], t[1]], {radius: 8, color: '#e8710a', fillOpacity: .9}).bindTooltip(`${i + 1}: ${t[2]} @ ${t[3]} m`))));
 const done = L.polyline([], {color: color('arrived'), weight: 7, opacity: .8}).addTo(map);
-D.turns.forEach((t, i) => L.circleMarker([t[0], t[1]], {radius: 8, color: '#e8710a', fillOpacity: .9})
-  .bindTooltip(`${i + 1}: ${t[2]} @ ${t[3]} m`).addTo(map));
-map.fitBounds(routeLine.getBounds().pad(0.3));
+let R = null, shown = -1;
+function showRoute(k) {
+  if (k === shown) return;
+  shown = k; R = D.routes[Math.max(0, k)];
+  routeLines.forEach((l, j) => l.setStyle(j === k ? {opacity: .75, dashArray: null, weight: 7}
+    : j < k ? {opacity: .45, dashArray: '6 8', weight: 4} : {opacity: 0}));
+  turnLayers.forEach((g, j) => j === Math.max(0, k) ? g.addTo(map) : g.remove());
+}
+map.fitBounds(L.featureGroup([...routeLines, ...T.map(t => L.marker([t.lat, t.lng]))]).getBounds().pad(0.15));
 
 const trail = T.map(t => L.circleMarker([t.lat, t.lng], {radius: 3, stroke: false, fillOpacity: 0}).addTo(map));
 T.forEach((t, i) => { if (t.say) L.circleMarker([t.lat, t.lng], {radius: 5, color: '#202124', weight: 1, fillColor: '#fff', fillOpacity: 1})
@@ -54,10 +63,10 @@ const ring = L.circle([T[0].lat, T[0].lng], {radius: 1, color: color('ok'), weig
 const me = L.circleMarker([T[0].lat, T[0].lng], {radius: 9, color: '#fff', weight: 3, fillOpacity: 1}).addTo(map);
 
 function along(d) {
-  const out = [D.route[0]];
-  for (let i = 1; i < D.route.length; i++) {
-    if (D.cum[i] <= d) { out.push(D.route[i]); continue; }
-    const f = (d - D.cum[i - 1]) / (D.cum[i] - D.cum[i - 1]), a = D.route[i - 1], b = D.route[i];
+  const out = [R.line[0]];
+  for (let i = 1; i < R.line.length; i++) {
+    if (R.cum[i] <= d) { out.push(R.line[i]); continue; }
+    const f = (d - R.cum[i - 1]) / (R.cum[i] - R.cum[i - 1]), a = R.line[i - 1], b = R.line[i];
     out.push([a[0] + f * (b[0] - a[0]), a[1] + f * (b[1] - a[1])]); break;
   }
   return out;
@@ -76,6 +85,7 @@ function go(i, fromPlay) {
   const t = T[cur];
   trail.forEach((m, k) => m.setStyle(k <= cur && k > cur - 300
     ? {fillColor: color(tone(T[k])), fillOpacity: .25 + .6 * (1 - (cur - k) / 300)} : {fillOpacity: 0}));
+  showRoute(t.route_i);
   me.setLatLng([t.lat, t.lng]).setStyle({fillColor: color(tone(t))});
   ring.setLatLng([t.lat, t.lng]).setRadius(Math.max(1, t.acc));
   done.setLatLngs(t.progress != null ? along(t.progress) : []);

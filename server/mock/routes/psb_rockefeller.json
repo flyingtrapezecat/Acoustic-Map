@@ -1,0 +1,44 @@
+{
+  "destination": {
+    "name": "Rockefeller Hall",
+    "lat": 42.4493217,
+    "lng": -76.4819886,
+    "center": [
+      42.4491542,
+      -76.4818911
+    ]
+  },
+  "polyline": [
+    [
+      42.44961800000001,
+      -76.482173
+    ],
+    [
+      42.449552,
+      -76.482172
+    ],
+    [
+      42.449516,
+      -76.482173
+    ],
+    [
+      42.449318,
+      -76.482165
+    ]
+  ],
+  "distance_m": 33.36955958768253,
+  "steps": [
+    {
+      "lat": 42.449318,
+      "lng": -76.482165,
+      "turn": "arrive",
+      "street": "",
+      "along_m": 33.36955958768253,
+      "distance_m": 33.4
+    }
+  ],
+  "scenario": {
+    "tests": "Real OSRM foot route PSB -> Rockefeller Hall",
+    "source": "OSRM foot, fetched 2026-10-03"
+  }
+}

@@ -1,0 +1,428 @@
+{
+  "destination": {
+    "name": "Gates Hall",
+    "lat": 42.444998,
+    "lng": -76.481389,
+    "center": [
+      42.444968,
+      -76.480864
+    ]
+  },
+  "polyline": [
+    [
+      42.44961800000001,
+      -76.482173
+    ],
+    [
+      42.449552,
+      -76.482172
+    ],
+    [
+      42.449516,
+      -76.482173
+    ],
+    [
+      42.4493,
+      -76.482164
+    ],
+    [
+      42.448966,
+      -76.482145
+    ],
+    [
+      42.448916,
+      -76.48219
+    ],
+    [
+      42.448864,
+      -76.482236
+    ],
+    [
+      42.448813,
+      -76.482273
+    ],
+    [
+      42.448763,
+      -76.482291
+    ],
+    [
+      42.448737,
+      -76.482295
+    ],
+    [
+      42.448542,
+      -76.482282
+    ],
+    [
+      42.448516,
+      -76.482227
+    ],
+    [
+      42.448485,
+      -76.482193
+    ],
+    [
+      42.448455,
+      -76.482181
+    ],
+    [
+      42.448431,
+      -76.482171
+    ],
+    [
+      42.448341,
+      -76.482148
+    ],
+    [
+      42.448242,
+      -76.482135
+    ],
+    [
+      42.448143,
+      -76.482131
+    ],
+    [
+      42.44796,
+      -76.482143
+    ],
+    [
+      42.44774,
+      -76.482116
+    ],
+    [
+      42.447736,
+      -76.482156
+    ],
+    [
+      42.447653,
+      -76.482155
+    ],
+    [
+      42.447654,
+      -76.481773
+    ],
+    [
+      42.447581,
+      -76.481772
+    ],
+    [
+      42.447524,
+      -76.481769
+    ],
+    [
+      42.447501,
+      -76.481764
+    ],
+    [
+      42.447401,
+      -76.481761
+    ],
+    [
+      42.447336,
+      -76.481738
+    ],
+    [
+      42.447251,
+      -76.481704
+    ],
+    [
+      42.446947,
+      -76.481694
+    ],
+    [
+      42.446896,
+      -76.481691
+    ],
+    [
+      42.446865,
+      -76.481685
+    ],
+    [
+      42.446834,
+      -76.481675
+    ],
+    [
+      42.446817,
+      -76.481668
+    ],
+    [
+      42.446801,
+      -76.481665
+    ],
+    [
+      42.446774,
+      -76.481666
+    ],
+    [
+      42.44676,
+      -76.481631
+    ],
+    [
+      42.44675,
+      -76.481613
+    ],
+    [
+      42.446736,
+      -76.481596
+    ],
+    [
+      42.446721,
+      -76.481583
+    ],
+    [
+      42.446704,
+      -76.48157
+    ],
+    [
+      42.446687,
+      -76.481562
+    ],
+    [
+      42.446671,
+      -76.481557
+    ],
+    [
+      42.446503,
+      -76.481552
+    ],
+    [
+      42.446345,
+      -76.481545
+    ],
+    [
+      42.446138,
+      -76.481537
+    ],
+    [
+      42.446121,
+      -76.481534
+    ],
+    [
+      42.446108,
+      -76.481528
+    ],
+    [
+      42.446084,
+      -76.481509
+    ],
+    [
+      42.446075,
+      -76.481503
+    ],
+    [
+      42.446067,
+      -76.481501
+    ],
+    [
+      42.445815,
+      -76.481498
+    ],
+    [
+      42.445804,
+      -76.4815
+    ],
+    [
+      42.445793,
+      -76.481508
+    ],
+    [
+      42.445765,
+      -76.481525
+    ],
+    [
+      42.44575,
+      -76.481528
+    ],
+    [
+      42.445736,
+      -76.48153
+    ],
+    [
+      42.445488,
+      -76.481526
+    ],
+    [
+      42.445443,
+      -76.481525
+    ],
+    [
+      42.445391,
+      -76.481525
+    ],
+    [
+      42.445348,
+      -76.481522
+    ],
+    [
+      42.445328,
+      -76.481518
+    ],
+    [
+      42.445317,
+      -76.481514
+    ],
+    [
+      42.445306,
+      -76.481506
+    ],
+    [
+      42.445272,
+      -76.481484
+    ],
+    [
+      42.445225,
+      -76.481481
+    ],
+    [
+      42.44517,
+      -76.481475
+    ],
+    [
+      42.445043,
+      -76.481468
+    ],
+    [
+      42.444994,
+      -76.481463
+    ]
+  ],
+  "distance_m": 562.3896662158395,
+  "steps": [
+    {
+      "lat": 42.448966,
+      "lng": -76.482145,
+      "turn": "slight_right",
+      "street": "",
+      "in_bearing": 180,
+      "out_bearing": 212,
+      "other_bearings": [
+        180
+      ],
+      "along_m": 72.54444364594775,
+      "distance_m": 72.5,
+      "path": null,
+      "toward": null,
+      "say_ahead": "keep right",
+      "say_now": "Keep right now."
+    },
+    {
+      "lat": 42.448542,
+      "lng": -76.482282,
+      "turn": "left",
+      "street": "Presidents' Drive",
+      "in_bearing": 180,
+      "out_bearing": 130,
+      "other_bearings": [
+        255
+      ],
+      "along_m": 122.92722979845016,
+      "distance_m": 50.4,
+      "which": null,
+      "toward": "Andrew Dickson White House",
+      "say_ahead": "turn left onto Presidents' Drive toward Andrew Dickson White House",
+      "say_now": "Turn left now onto Presidents' Drive toward Andrew Dickson White House."
+    },
+    {
+      "lat": 42.44796,
+      "lng": -76.482143,
+      "turn": "slight_left",
+      "street": "",
+      "in_bearing": 180,
+      "out_bearing": 174,
+      "other_bearings": [
+        210
+      ],
+      "along_m": 191.6205476589969,
+      "distance_m": 68.7,
+      "path": "the footpath",
+      "toward": null,
+      "say_ahead": "take the gentle left onto the footpath",
+      "say_now": "Take the gentle left now onto the footpath."
+    },
+    {
+      "lat": 42.447653,
+      "lng": -76.482155,
+      "turn": "left",
+      "street": "",
+      "in_bearing": 180,
+      "out_bearing": 88,
+      "other_bearings": [
+        270
+      ],
+      "along_m": 228.72508145044733,
+      "distance_m": 37.1,
+      "which": null,
+      "toward": null,
+      "say_ahead": "turn left",
+      "say_now": "Turn left now."
+    },
+    {
+      "lat": 42.44765393404687,
+      "lng": -76.48179820902801,
+      "turn": "stairs",
+      "street": "",
+      "along_m": 258.0,
+      "then": [
+        {
+          "lat": 42.447654,
+          "lng": -76.481773,
+          "turn": "right",
+          "street": "",
+          "in_bearing": 90,
+          "out_bearing": 178,
+          "other_bearings": [
+            90,
+            345
+          ],
+          "along_m": 260.06841620964394,
+          "distance_m": 31.3,
+          "which": null,
+          "toward": "Ives Hall"
+        }
+      ],
+      "distance_m": 29.3,
+      "say_ahead": "take the stairs, then right toward Ives Hall",
+      "say_now": "Take the stairs now, then right toward Ives Hall."
+    },
+    {
+      "lat": 42.446774,
+      "lng": -76.481666,
+      "turn": "slight_left",
+      "street": "",
+      "in_bearing": 165,
+      "out_bearing": 132,
+      "other_bearings": [
+        195,
+        285
+      ],
+      "along_m": 358.85596695841826,
+      "distance_m": 100.9,
+      "path": "the footpath",
+      "toward": "Barton Hall",
+      "say_ahead": "take the gentle left onto the footpath toward Barton Hall",
+      "say_now": "Take the gentle left now onto the footpath toward Barton Hall."
+    },
+    {
+      "lat": 42.445512805678774,
+      "lng": -76.48152640009017,
+      "turn": "crossing",
+      "street": "",
+      "along_m": 504.0,
+      "distance_m": 145.1,
+      "say_ahead": "cross the street",
+      "say_now": "Cross the street when it's safe."
+    },
+    {
+      "lat": 42.444994,
+      "lng": -76.481463,
+      "turn": "arrive",
+      "street": "",
+      "along_m": 562.3896662158395,
+      "distance_m": 58.4
+    }
+  ],
+  "scenario": {
+    "tests": "Real OSRM foot route PSB -> Gates Hall",
+    "source": "OSRM foot, fetched 2026-10-03"
+  }
+}

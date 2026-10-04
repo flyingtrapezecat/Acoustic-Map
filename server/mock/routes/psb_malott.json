@@ -1,9 +1,9 @@
 {
   "scenario": {
-    "tests": "Real campus route PSB -> Malott Hall from OpenStreetMap foot routing (routing.openstreetmap.de). Short legs: two turns 31 m apart at the start, and a 44 m final leg. Ends at Malott's outside entrance.",
+    "tests": "Real campus route PSB -> Malott Hall from OpenStreetMap foot routing (routing.openstreetmap.de). Starts at the corner west of PSB (OSRM's 31 m doorway stub is trimmed; walks start there). A 44 m final leg. Ends at Malott's outside entrance.",
     "source": "OSRM foot profile, fetched 2026-10-03",
     "expect": [
-      "4 turns announced in order",
+      "3 turns in order: left, right, left",
       "no false off-route on a clean walk",
       "arrive at Malott outside entrance"
     ]
@@ -11,23 +11,16 @@
   "destination": {
     "name": "Malott Hall",
     "lat": 42.44847,
-    "lng": -76.480097
+    "lng": -76.480097,
+    "center": [
+      42.448186,
+      -76.48019
+    ],
+    "via": "stairs"
   },
   "polyline": [
     [
-      42.449626,
-      -76.481794
-    ],
-    [
-      42.449627,
-      -76.48195
-    ],
-    [
-      42.449624,
-      -76.482046
-    ],
-    [
-      42.449618,
+      42.44961800000001,
       -76.482173
     ],
     [
@@ -95,42 +88,73 @@
       -76.480097
     ]
   ],
-  "distance_m": 330.5,
+  "distance_m": 299.3519575035589,
   "steps": [
-    {
-      "lat": 42.449618,
-      "lng": -76.482173,
-      "turn": "left",
-      "street": "",
-      "distance_m": 31.2
-    },
     {
       "lat": 42.448728,
       "lng": -76.48213,
       "turn": "left",
       "street": "",
-      "distance_m": 98.9
+      "in_bearing": 180,
+      "out_bearing": 88,
+      "other_bearings": [
+        270
+      ],
+      "along_m": 99.03743826818105,
+      "distance_m": 99.0,
+      "which": null,
+      "toward": "Space Sciences Building",
+      "say_ahead": "turn left toward Space Sciences Building",
+      "say_now": "Turn left now toward Space Sciences Building."
     },
     {
       "lat": 42.448756,
       "lng": -76.48062,
       "turn": "right",
       "street": "",
-      "distance_m": 124.3
+      "in_bearing": 90,
+      "out_bearing": 178,
+      "other_bearings": [
+        90
+      ],
+      "along_m": 222.9721757821161,
+      "distance_m": 123.9,
+      "which": null,
+      "toward": "Big Red Barn",
+      "say_ahead": "turn right toward Big Red Barn",
+      "say_now": "Turn right now toward Big Red Barn."
     },
     {
       "lat": 42.448464,
       "lng": -76.480629,
       "turn": "left",
       "street": "",
-      "distance_m": 32.7
+      "in_bearing": 180,
+      "out_bearing": 87,
+      "other_bearings": [
+        180
+      ],
+      "along_m": 255.68966774947074,
+      "distance_m": 32.7,
+      "which": null,
+      "toward": "Malott Hall",
+      "then": [
+        {
+          "lat": 42.448466925989926,
+          "lng": -76.48055219301284,
+          "turn": "crossing",
+          "street": "",
+          "along_m": 262.0
+        }
+      ]
     },
     {
       "lat": 42.44847,
       "lng": -76.480097,
       "turn": "arrive",
       "street": "",
-      "distance_m": 43.8
+      "along_m": 299.3519575035589,
+      "distance_m": 43.7
     }
   ]
 }

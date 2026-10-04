@@ -127,7 +127,7 @@ def print_if_changed(reply, prev_state, ms):
     if say:
         print(f"  say: {say}", end="")
     if reply.get("route"):
-        print(f"  route: {len(reply['route'])} turns", end="")
+        print(f"  route: {len(reply['route'])} turns, route_line: {len(reply.get('route_line') or [])} points", end="")
     print(flush=True)
     return state
 

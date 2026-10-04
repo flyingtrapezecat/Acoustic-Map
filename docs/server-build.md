@@ -91,7 +91,7 @@ The contract for Sophia is in [contract.md](contract.md); the agent's design is 
 | `bearing_deg(a, b)` | Compass bearing 0–360 from a to b |
 | `move(a, bearing, meters)` | The point you reach walking that far in that direction |
 | `angle_diff(a, b)` | The signed difference -180…180 (positive means b is clockwise of a) |
-| `clock_face(heading, bearing)` | 1–12, e.g. `3` means "at your 3 o'clock" |
+| `relative_direction(facing, bearing)` | "straight ahead", "to your left", "behind you, to your right"… (wide zones, see navigation.md) |
 | `cumulative_m(polyline)` | Distance along the route at each vertex: `[0, d01, d01+d12, ...]` |
 | `locate(p, polyline, cum, lo, hi)` | `(along_m, off_m, seg_i)`: snaps p onto the route, searching only between `lo` and `hi` meters along it. A flat-earth approximation is fine at walking scale. |
 
@@ -133,7 +133,7 @@ The uvicorn log shows positions moving along the route.
 - `handle_speech` for `go`:
   1. Find the place and get the route.
   2. Set `state = "navigating"`, `step_i = 0`, `progress_m = 0`, clear `announced`, and `send_route = True`.
-  3. Say: "Starting route to Doe Library, 420 meters. The route starts at your 4 o'clock."
+  3. Say: "Starting route to Doe Library, 420 meters. The route starts to your right."
 - `main.py`: `/update` becomes `resp = handler.handle_update(req, req.transcript)`, then logs and returns it.
 
 **Checkpoint:** `fake_phone.py --route ... --transcript "take me to the library" --at 2` prints the
@@ -232,6 +232,12 @@ Changes:
 - `get_route(start, dest)` converts the OSRM steps into the route shape, as `psb_malott.json` was built.
 - Cache both in a dict keyed by the rounded inputs. Keep `ROUTING_MOCK=1` as the demo fallback.
 - **Contract:** the reply's `route` comes with a new `route_line` (the full polyline), for the iOS map.
+
+**Built (step 6):** places from `KNOWN_PLACES` then Nominatim; routes to the nearest door (OSM entrances or
+hand-picked); OSRM's doorway stub trimmed; path features from Overpass (`paths.py`: stairs, archways,
+crossings, which branch at a fork, a building the new path heads toward); steps under 15 m apart said together;
+Gemini rewording once per trip (`phrasing.py`, checked, rule wording as fallback); disk cache (`cache.py`,
+`python routing.py --warm`); OSRM down → saved route in `mock/routes/` that starts within 80 m.
 
 **Checkpoint:** "Malott Hall" from PSB gives the same route as `mock/routes/psb_malott.json`.
 

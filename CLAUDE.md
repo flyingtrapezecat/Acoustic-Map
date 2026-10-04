@@ -20,3 +20,6 @@ Plans and contracts are in `docs/`: start with `docs/server-build.md`, then `nav
 - Run from `server/`: `source .venv/bin/activate && uvicorn main:app --reload --host 0.0.0.0 --port 8000`
 - Tunnel: `cloudflared tunnel --url http://localhost:8000`
 - Keys go in `server/.env` (gitignored). Logging and recording switches are `LOG_LEVEL` and `RECORD_UPDATES`.
+- Before a demo, fill the cache (OpenStreetMap paths, landmarks, Gemini wording) so trips don't depend on
+  slow APIs: `ROUTING_MOCK=0 python routing.py --warm` (from PSB), or `--warm <lat>,<lng>` from the demo's
+  start point. The cache lives in `server/cache/`.

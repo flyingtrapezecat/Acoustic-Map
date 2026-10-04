@@ -6,6 +6,8 @@ import routing
 import sessions
 
 ARRIVE_M = 15
+DOOR_SAY_M = 6
+VIA = {"archway": ", through the archway", "stairs": ", by the stairs", "crossing": ", across the street"}
 NOW_M = 10
 AHEAD_M = 40
 REASSURE_S = 45
@@ -30,14 +32,45 @@ REROUTE_AFTER_S = 30
 REROUTE_EVERY_S = 15
 
 
-def turn_phrase(step):
-    if step["turn"] == "arrive":
-        return "arrive at your destination"
-    phrase = f"turn {step['turn'].replace('_', ' ')}"
-    if step["turn"] == "straight":
-        phrase = "continue straight"
-    if step.get("street"):
+PHRASES = {"arrive": "arrive at your destination", "straight": "continue straight",
+           "slight_left": "keep left", "slight_right": "keep right", "uturn": "make a U-turn",
+           "archway": "go through the archway", "stairs": "take the stairs", "crossing": "cross the street"}
+# when two paths leave on the same side: (what to say, the contrast added at the end)
+WHICH = {"slight": ("turn slightly {side}", ", not the sharp {side}"),
+         "sharp": ("turn sharp {side}", ", not the slight {side}"),
+         "middle": ("take the middle path on your {side}", "")}
+NOW_PHRASES = {"crossing": "street crossing here, cross when it's safe"}
+
+
+def one_phrase(step, now=False):
+    if now and step["turn"] in NOW_PHRASES:
+        return NOW_PHRASES[step["turn"]]
+    phrase = PHRASES.get(step["turn"], f"turn {step['turn'].replace('_', ' ')}")
+    side = "left" if "left" in step["turn"] else "right"
+    which = WHICH.get(step.get("which"))
+    if which:
+        phrase = which[0].format(side=side)
+    if now:
+        phrase += " now"
+    if step.get("path"):
+        phrase += f" onto {step['path']}"
+    elif step.get("street"):
         phrase += f" onto {step['street']}"
+    if step.get("toward"):
+        phrase += f" toward {step['toward']}"
+    if which and which[1]:
+        phrase += which[1].format(side=side)
+    return phrase
+
+
+def turn_phrase(step, now=False, polished=True):
+    """'turn left', or for steps said together 'turn left, then right' ('turn left now, then right').
+    Uses Gemini's wording (phrasing.py) when the step has it."""
+    if polished and step.get("say_now" if now else "say_ahead"):
+        return step["say_now" if now else "say_ahead"].rstrip(".")
+    phrase = one_phrase(step, now)
+    for nxt in step.get("then", []):
+        phrase += ", then " + one_phrase(nxt).removeprefix("turn ")
     return phrase
 
 
@@ -145,7 +178,7 @@ def correcting(s):
             and now - s["last_reroute_t"] > REROUTE_EVERY_S):
         s["last_reroute_t"] = now
         try:
-            route = routing.get_route(s["pos"], s["route"]["destination"])
+            route = routing.get_route(s["pos"], s["route"]["destination"], polish=False)
         except Exception:
             route = None
         if route:
@@ -162,6 +195,22 @@ def correcting(s):
     s["correction_repeats"] += 1
     s["correction_off_m"] = s["off_m"]
     return correction_say(s), "off_route"
+
+
+def arrival_say(s, dest):
+    """Which side the building is on, and where its door is if it's not right here."""
+    say = f"You have arrived at {dest['name']}."
+    face = facing(s)
+    if face is None:
+        face = segment_bearing(s)
+    if dest.get("center"):
+        where = geo.relative_direction(face, geo.bearing_deg(s["pos"], dest["center"]))
+        say += f" It's {where}."
+    door = (dest["lat"], dest["lng"])
+    via = VIA.get(dest.get("via"), "")
+    if via or geo.distance_m(s["pos"], door) >= DOOR_SAY_M:
+        say += f" The entrance is {geo.relative_direction(face, geo.bearing_deg(s['pos'], door))}{via}."
+    return say
 
 
 def weak_gps(s):
@@ -190,7 +239,7 @@ def next_instruction(s):
     if (remaining_m(s) <= ARRIVE_M
             or geo.distance_m(s["pos"], (dest["lat"], dest["lng"])) <= ARRIVE_M):
         s.update(state="arrived", correction=None)
-        return f"You have arrived at {dest['name']}.", "arrived"
+        return arrival_say(s, dest), "arrived"
 
     if s["correction"]:
         return correcting(s)
@@ -205,7 +254,8 @@ def next_instruction(s):
     if step["turn"] != "arrive":
         if to_turn <= NOW_M and f"{key}:now" not in s["announced"]:
             s["announced"].update({f"{key}:now", f"{key}:ahead"})
-            return f"{turn_phrase(step).capitalize()} now.", turn_haptic(step)
+            phrase = turn_phrase(step, now=True)
+            return f"{phrase[0].upper()}{phrase[1:]}.", turn_haptic(step)
         # just after a turn, announce a close next turn right away instead of "continue"
         if (to_turn <= AHEAD_M or (passed and to_turn <= AHEAD_M + 15)) \
                 and f"{key}:ahead" not in s["announced"]:

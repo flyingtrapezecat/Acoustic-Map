@@ -1,0 +1,85 @@
+{
+  "scenario": {
+    "tests": "Detour leg: from 290 m along PSB -> Flora Rose, walk to Olin Library instead",
+    "source": "OSRM foot, fetched 2026-10-03"
+  },
+  "destination": {
+    "name": "Olin Library",
+    "lat": 42.447972,
+    "lng": -76.484776,
+    "center": [
+      42.447823,
+      -76.484281
+    ]
+  },
+  "polyline": [
+    [
+      42.448915,
+      -76.48512800000002
+    ],
+    [
+      42.448189,
+      -76.485088
+    ],
+    [
+      42.448156,
+      -76.484892
+    ],
+    [
+      42.448106,
+      -76.484888
+    ],
+    [
+      42.44807,
+      -76.484882
+    ],
+    [
+      42.447969,
+      -76.484876
+    ]
+  ],
+  "distance_m": 118.13328562111421,
+  "steps": [
+    {
+      "lat": 42.448189,
+      "lng": -76.485088,
+      "turn": "left",
+      "street": "",
+      "in_bearing": 180,
+      "out_bearing": 102,
+      "other_bearings": [
+        180,
+        255,
+        300
+      ],
+      "along_m": 80.79420276524444,
+      "distance_m": 80.8,
+      "which": null,
+      "toward": null
+    },
+    {
+      "lat": 42.448156,
+      "lng": -76.484892,
+      "turn": "right",
+      "street": "",
+      "in_bearing": 105,
+      "out_bearing": 174,
+      "other_bearings": [
+        45,
+        75
+      ],
+      "along_m": 97.2892129303669,
+      "distance_m": 16.5,
+      "which": null,
+      "toward": "Olin Library"
+    },
+    {
+      "lat": 42.447969,
+      "lng": -76.484876,
+      "turn": "arrive",
+      "street": "",
+      "along_m": 118.13328562111421,
+      "distance_m": 20.8
+    }
+  ]
+}

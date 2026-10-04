@@ -9,6 +9,8 @@ import webbrowser
 from datetime import datetime
 from pathlib import Path
 
+from dotenv import load_dotenv
+
 HERE = Path(__file__).parent
 OFF_M = 20       # further than this from the route = off route
 BACK_M = 8       # this far behind progress while moving = walking the wrong way
@@ -26,7 +28,7 @@ def simulate(log_path, say, at):
 
     rows = [json.loads(line) for line in open(log_path) if line.strip()]
     t0 = datetime.fromisoformat(rows[0]["t"])
-    ticks, last_ts = [], None
+    ticks, last_ts, routes = [], None, []
     for i, row in enumerate(rows):
         clock[0] = (datetime.fromisoformat(row["t"]) - t0).total_seconds()
         transcript = say if i == at else None
@@ -40,13 +42,16 @@ def simulate(log_path, say, at):
                 "heard": transcript, "say": resp.say, "haptic": resp.haptic, "state": resp.state,
                 "status": "idle"}
         last_ts = q["timestamp"]
+        if resp.route:  # a new trip or a reroute
+            routes.append({"from": i, "route": s["route"]})
+        tick["route_i"] = len(routes) - 1
         if s["route"]:
             step = s["route"]["steps"][s["step_i"]]
             tick.update(progress=round(s["progress_m"], 1), raw=round(s["raw_along_m"], 1),
                         off=round(s["off_m"], 1), step=s["step_i"],
                         to_turn=round(step["along_m"] - s["progress_m"], 1), status=status(s, q))
         ticks.append(tick)
-    return ticks, s["route"]
+    return ticks, routes
 
 
 def status(s, q):
@@ -59,12 +64,12 @@ def status(s, q):
     return "ok"
 
 
-def find_issues(ticks, route):
+def find_issues(ticks, routes):
     issues, run = [], []
     for tick in ticks + [{"status": "end"}]:
         if run and tick["status"] != run[0]["status"]:
             if len(run) >= MIN_TICKS:
-                issues.append(describe(run, ticks, route))
+                issues.append(describe(run, ticks, routes[run[0]["route_i"]]["route"]))
             run = []
         if tick["status"] in ("off", "back"):
             run.append(tick)
@@ -86,10 +91,11 @@ def describe(run, ticks, route):
             "server": spoken[0] if spoken else None}
 
 
-def write_html(ticks, route, issues, out, title):
-    data = {"title": title, "route": route["polyline"], "cum": route["cum"],
-            "turns": [[st["lat"], st["lng"], st["turn"], round(st["along_m"])] for st in route["steps"]],
-            "ticks": ticks, "issues": issues}
+def write_html(ticks, routes, issues, out, title):
+    data = {"title": title, "ticks": ticks, "issues": issues,
+            "routes": [{"from": r["from"], "line": r["route"]["polyline"], "cum": r["route"]["cum"],
+                        "turns": [[st["lat"], st["lng"], st["turn"], round(st["along_m"])]
+                                  for st in r["route"]["steps"]]} for r in routes]}
     out.parent.mkdir(exist_ok=True)
     out.write_text((HERE / "simulate_template.html").read_text().replace("__DATA__", json.dumps(data)))
 
@@ -97,22 +103,25 @@ def write_html(ticks, route, issues, out, title):
 def main():
     p = argparse.ArgumentParser()
     p.add_argument("log")
-    p.add_argument("--route", default="mock/routes/psb_malott.json")
+    p.add_argument("--route", default="mock/routes/psb_malott.json", help="the mock route (ignored with --real)")
+    p.add_argument("--real", action="store_true", help="real routing: any destination, reroutes (needs network)")
     p.add_argument("--say", default="take me there", help="transcript that starts the trip")
     p.add_argument("--at", type=int, default=15, help="tick to say it (after GPS warm-up)")
     p.add_argument("-o", "--out")
     p.add_argument("--open", action="store_true")
     args = p.parse_args()
 
-    os.environ["ROUTING_MOCK"] = "1"
+    load_dotenv(HERE / ".env")
+    os.environ["ROUTING_MOCK"] = "0" if args.real else "1"
     os.environ["ROUTING_MOCK_FILE"] = args.route
-    ticks, route = simulate(args.log, args.say, args.at)
-    if route is None:
+    ticks, routes = simulate(args.log, args.say, args.at)
+    if not routes:
         raise SystemExit("No trip started; check --say / --at.")
-    issues = find_issues(ticks, route)
+    issues = find_issues(ticks, routes)
 
     out = Path(args.out or f"viz/sim_{Path(args.log).stem[:8]}.html")
-    write_html(ticks, route, issues, out, f"{Path(args.log).stem[:8]} on {Path(args.route).stem}")
+    on = "real routing" if args.real else Path(args.route).stem
+    write_html(ticks, routes, issues, out, f"{Path(args.log).stem[:8]} on {on}")
     for t in ticks:
         if t["say"]:
             print(f"{t['clock']}  {t['haptic'] or '':10} {t['say']}")

@@ -10,7 +10,11 @@
   "destination": {
     "name": "Physical Sciences Building",
     "lat": 42.449626,
-    "lng": -76.481794
+    "lng": -76.481794,
+    "center": [
+      42.44987,
+      -76.481791
+    ]
   },
   "polyline": [
     [

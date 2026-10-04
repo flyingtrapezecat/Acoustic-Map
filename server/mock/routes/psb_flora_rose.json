@@ -1,0 +1,389 @@
+{
+  "destination": {
+    "name": "Flora Rose House",
+    "lat": 42.44783,
+    "lng": -76.488893,
+    "center": [
+      42.447918,
+      -76.488786
+    ],
+    "via": "archway"
+  },
+  "polyline": [
+    [
+      42.44968300000001,
+      -76.482175
+    ],
+    [
+      42.449681,
+      -76.482249
+    ],
+    [
+      42.449681,
+      -76.482278
+    ],
+    [
+      42.44968,
+      -76.482314
+    ],
+    [
+      42.449679,
+      -76.482351
+    ],
+    [
+      42.449674,
+      -76.482585
+    ],
+    [
+      42.449673,
+      -76.482628
+    ],
+    [
+      42.449689,
+      -76.482676
+    ],
+    [
+      42.449687,
+      -76.482759
+    ],
+    [
+      42.449686,
+      -76.482811
+    ],
+    [
+      42.449685,
+      -76.482871
+    ],
+    [
+      42.449683,
+      -76.482924
+    ],
+    [
+      42.449682,
+      -76.482963
+    ],
+    [
+      42.449675,
+      -76.483107
+    ],
+    [
+      42.449677,
+      -76.48313
+    ],
+    [
+      42.449674,
+      -76.483248
+    ],
+    [
+      42.449664,
+      -76.483522
+    ],
+    [
+      42.449655,
+      -76.483796
+    ],
+    [
+      42.449611,
+      -76.483793
+    ],
+    [
+      42.449303,
+      -76.484412
+    ],
+    [
+      42.449039,
+      -76.484957
+    ],
+    [
+      42.448915,
+      -76.485128
+    ],
+    [
+      42.448902,
+      -76.485425
+    ],
+    [
+      42.448892,
+      -76.485664
+    ],
+    [
+      42.448828,
+      -76.485715
+    ],
+    [
+      42.448783,
+      -76.485751
+    ],
+    [
+      42.44872,
+      -76.485784
+    ],
+    [
+      42.44869,
+      -76.485812
+    ],
+    [
+      42.448655,
+      -76.485861
+    ],
+    [
+      42.448573,
+      -76.48602
+    ],
+    [
+      42.448374,
+      -76.486427
+    ],
+    [
+      42.448137,
+      -76.486921
+    ],
+    [
+      42.448117,
+      -76.486952
+    ],
+    [
+      42.448021,
+      -76.487098
+    ],
+    [
+      42.447919,
+      -76.487264
+    ],
+    [
+      42.447842,
+      -76.487404
+    ],
+    [
+      42.447773,
+      -76.487552
+    ],
+    [
+      42.447768,
+      -76.48759
+    ],
+    [
+      42.447767,
+      -76.487628
+    ],
+    [
+      42.447763,
+      -76.487707
+    ],
+    [
+      42.447702,
+      -76.487706
+    ],
+    [
+      42.44757,
+      -76.487841
+    ],
+    [
+      42.447531,
+      -76.487868
+    ],
+    [
+      42.447531,
+      -76.487894
+    ],
+    [
+      42.44753,
+      -76.487949
+    ],
+    [
+      42.44753,
+      -76.487959
+    ],
+    [
+      42.44753,
+      -76.487977
+    ],
+    [
+      42.447526,
+      -76.488191
+    ],
+    [
+      42.447526,
+      -76.488299
+    ],
+    [
+      42.447525,
+      -76.488335
+    ],
+    [
+      42.447524,
+      -76.488596
+    ],
+    [
+      42.447638,
+      -76.488705
+    ],
+    [
+      42.447736,
+      -76.488809
+    ],
+    [
+      42.447829,
+      -76.488895
+    ]
+  ],
+  "distance_m": 662.7026716382593,
+  "steps": [
+    {
+      "lat": 42.44968168325911,
+      "lng": -76.48222371961148,
+      "turn": "stairs",
+      "street": "",
+      "along_m": 4.0,
+      "distance_m": 4.0,
+      "say_ahead": "take the stairs",
+      "say_now": "Take the stairs now."
+    },
+    {
+      "lat": 42.449655,
+      "lng": -76.483796,
+      "turn": "left",
+      "street": "",
+      "in_bearing": 270,
+      "out_bearing": 175,
+      "other_bearings": [
+        0,
+        270
+      ],
+      "along_m": 133.508243288933,
+      "then": [
+        {
+          "lat": 42.449611,
+          "lng": -76.483793,
+          "turn": "right",
+          "street": "",
+          "in_bearing": 180,
+          "out_bearing": 234,
+          "other_bearings": [
+            180
+          ],
+          "along_m": 138.407007787616
+        }
+      ],
+      "distance_m": 129.5,
+      "which": null,
+      "toward": null,
+      "say_ahead": "turn left, then right",
+      "say_now": "Turn left now, then right."
+    },
+    {
+      "lat": 42.448915,
+      "lng": -76.485128,
+      "turn": "right",
+      "street": "",
+      "in_bearing": 225,
+      "out_bearing": 265,
+      "other_bearings": [
+        0,
+        180
+      ],
+      "along_m": 272.8253727800681,
+      "distance_m": 139.3,
+      "which": "slight",
+      "toward": null,
+      "say_ahead": "take the gentle right, not the sharp right",
+      "say_now": "Take the gentle right now, not the sharp right."
+    },
+    {
+      "lat": 42.44777425722237,
+      "lng": -76.48754930335568,
+      "turn": "crossing",
+      "street": "",
+      "along_m": 518.0,
+      "then": [
+        {
+          "lat": 42.447763,
+          "lng": -76.487707,
+          "turn": "left",
+          "street": "",
+          "in_bearing": 270,
+          "out_bearing": 178,
+          "other_bearings": [
+            330
+          ],
+          "along_m": 531.0458713814818,
+          "distance_m": 258.2,
+          "which": null,
+          "toward": "Lyon Hall"
+        },
+        {
+          "lat": 42.447702,
+          "lng": -76.487706,
+          "turn": "slight_right",
+          "street": "",
+          "in_bearing": 180,
+          "out_bearing": 216,
+          "other_bearings": [
+            180
+          ],
+          "along_m": 537.8292581520665
+        }
+      ],
+      "distance_m": 245.2,
+      "say_ahead": "cross the street, turn left toward Lyon Hall and keep right",
+      "say_now": "Cross the street when it's safe, then turn left toward Lyon Hall and keep right."
+    },
+    {
+      "lat": 42.447531,
+      "lng": -76.487868,
+      "turn": "right",
+      "street": "",
+      "in_bearing": 210,
+      "out_bearing": 268,
+      "other_bearings": [
+        90
+      ],
+      "along_m": 561.0872780019902,
+      "distance_m": 43.1,
+      "which": null,
+      "toward": null,
+      "then": [
+        {
+          "lat": 42.447530827340806,
+          "lng": -76.48790349635982,
+          "turn": "stairs",
+          "street": "",
+          "along_m": 564.0
+        }
+      ],
+      "say_ahead": "turn right, then take the stairs",
+      "say_now": "Turn right now, then take the stairs."
+    },
+    {
+      "lat": 42.447524,
+      "lng": -76.488596,
+      "turn": "right",
+      "street": "",
+      "in_bearing": 270,
+      "out_bearing": 323,
+      "other_bearings": [
+        30,
+        135,
+        210
+      ],
+      "along_m": 620.8292534550119,
+      "distance_m": 59.7,
+      "which": "slight",
+      "toward": "Flora Rose House",
+      "say_ahead": "take the gentle right toward Flora Rose House, not the sharp right",
+      "say_now": "Take the gentle right now toward Flora Rose House, not the sharp right."
+    },
+    {
+      "lat": 42.447829,
+      "lng": -76.488895,
+      "turn": "arrive",
+      "street": "",
+      "along_m": 662.7026716382593,
+      "distance_m": 41.9
+    }
+  ],
+  "scenario": {
+    "tests": "Real OSRM foot route PSB -> Flora Rose House",
+    "source": "OSRM foot, fetched 2026-10-03"
+  }
+}

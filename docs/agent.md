@@ -33,12 +33,12 @@ These are plain Python functions; each returns a small JSON-able dict.
 
 | Tool | Args | Returns | Calls |
 |---|---|---|---|
-| `search_places` | `query`, `radius_m=800` | up to 5 × `{place_id, name, category, distance_m, clock}` | `routing.search_places`, `geo.clock_face` |
+| `search_places` | `query`, `radius_m=800` | up to 5 × `{place_id, name, category, distance_m, direction}` | `routing.search_places`, `geo.relative_direction` |
 | `plan_route` | `place_id` | `{distance_m, turns, minutes}` (doesn't start anything) | `routing.get_route` |
 | `start_navigation` | `place_id` | `{started: true, distance_m}`, and the route goes to the phone | `routing.get_route`, `sessions.start_trip` |
 | `cancel_navigation` | — | `{cancelled: bool}` | `sessions.end_trip` |
 | `trip_status` | — | `{state, destination, remaining_m, next_turn, next_turn_m}` | session and guidance helpers |
-| `describe_surroundings` | — | named places within ~60 m, each with a clock-face direction | `routing.search_places`, `geo.clock_face` |
+| `describe_surroundings` | — | named places within ~60 m, each with a left/right/behind direction | `routing.search_places`, `geo.relative_direction` |
 
 `place_id`s are short keys into a per-session dict of the last search results, so the model never
 has to copy coordinates.
@@ -48,7 +48,7 @@ has to copy coordinates.
 > You are the voice of AcousticMaps, a walking guide for someone who cannot see the screen.
 > Everything you write is spoken aloud. Reply in at most two short sentences. Never refer to
 > anything visual ("on the map", "the blue line"). Give distances in meters, rounded to tens, and
-> directions as clock positions ("at your 2 o'clock") or left and right.
+> directions as left, right, ahead or behind ("ahead, slightly to your right"), never clock positions.
 > Use tools to find places and start navigation; never invent places or distances.
 > If a request matches several places and the user didn't say which, ask one short question naming
 > the top two. If you can't help, say so plainly and suggest what they can ask.
@@ -61,7 +61,7 @@ has to copy coordinates.
 | "take me to Malott" | Starts navigation to Malott Hall and says the distance |
 | "somewhere I can get coffee" | Picks the nearest cafe, says its name and distance, starts navigation |
 | "the library" | Asks "Do you mean Uris Library or Olin Library?", or whichever two are nearest |
-| "what's around me" | Names 2–3 nearby places with clock directions |
+| "what's around me" | Names 2–3 nearby places with left/right directions |
 | "how long until I get there" | Remaining distance and minutes (needs an active trip) |
 | "I think I'm lost" | Reassures, gives trip status, and offers to reroute |
 | "asdf banana" | "Sorry, I didn't understand. You can say a place, like Malott Hall." |

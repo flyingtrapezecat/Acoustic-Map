@@ -24,10 +24,10 @@ Run these checks in order. **The first one that fires is what gets said this tic
 | 0 | Mute | Session is `listening` or `thinking` | `null`. Never talk over the user. |
 | 1 | Weak GPS | Fresh fixes with `accuracy_m > 30` for 10 s | "GPS signal is weak. Keep going carefully." (once per weak spell); those fixes don't move tracking |
 | 2 | Arrived | Within 15 m of the destination or the end of the route | "You have arrived at Malott Hall." / `arrived` → state `arrived` |
-| 3 | Off route | More than 20 m from the nearby stretch of route, for 3 fresh ticks | "You've left the route. The path is at your 8 o'clock, 20 meters." / `off_route`, state `off_route`; repeated every 15 s with the direction updated. With real routing: reroute if more than 40 m or more than 30 s |
+| 3 | Off route | More than 20 m from the nearby stretch of route, for 3 fresh ticks | "You've left the route. The path is behind you, 20 meters." / `off_route`, state `off_route`. Repeats back off: 15 s, then 30 s, then every 45 s, and stay quiet while the user is closing in (5 m or more nearer than last time). With real routing: reroute if more than 40 m or more than 30 s |
 | 4 | Turn now | Within 10 m of the next turn, measured along the route | "Turn left now onto Bancroft Way." / `turn_left` or `turn_right` |
-| 5 | Wrong way | Walking (`speed > 0.5`) and moving backward along the route (8 m or more behind progress) for 3 fresh ticks. iOS `course` is **not** used; it lagged and repeated stale values in walk 4 | "You're heading the wrong way. Turn around." / `off_route`; repeated every 15 s |
-| 5b | Back on route | While correcting: within 12 m of the route (or walking forward again) for 2 ticks | "You're back on route. The route continues at your 9 o'clock." / `tick` → state `navigating` |
+| 5 | Wrong way | Walking (`speed > 0.5`) and moving backward along the route (8 m or more behind progress) for 3 fresh ticks. iOS `course` is **not** used; it lagged and repeated stale values in walk 4 | "You're heading the wrong way. Turn around." / `off_route`; repeats back off the same way (15, 30, 45 s) |
+| 5b | Back on route | While correcting: within 12 m of the route (or walking forward again) for 2 ticks | "You're back on route. Follow it to your left." (or "Keep going straight.") / `tick` → state `navigating` |
 | 6 | Turn ahead | Within 40 m of the next turn, measured along the route, and not yet announced | "In 40 meters, turn left onto Bancroft Way." / `tick` |
 | 7 | Passed a turn | Route progress is past the turn. Progress only moves forward, so a passed turn is never announced again. | Move on to the next step. "Continue straight for 200 meters." / `tick` |
 | 8 | Reassurance | Nothing said for 45 s | "Still on route. 120 meters to the next turn." |
@@ -37,14 +37,26 @@ Rules that apply to every message:
   announcements it has made (`ahead`, `now`).
 - **Corrections need consistency.** Checks 3 and 5 need 3 bad ticks in a row, because one jumpy GPS
   fix should never make the app tell a person to turn around.
-- **Clock-face directions for the first orientation.** At trip start, compare `heading_deg` (where the
-  phone points) with the first segment's bearing: "The route starts at your 4 o'clock. Turn right,
-  then walk straight." This is a standard convention for blind navigation and fixes the most common
-  confusion at the start.
+- **Directions are left / right / behind, not clock positions.** Clock numbers near 3, 6 and 9 were
+  confusing, and compass wobble (±20°) flipped them. `geo.relative_direction(facing, bearing)` uses
+  wide zones, so a small error rarely changes the answer:
+
+  | Angle from the way you're walking | Said as |
+  |---|---|
+  | within 30° | "straight ahead" |
+  | 30–60° | "ahead, slightly to your left/right" |
+  | 60–120° | "to your left/right" |
+  | 120–150° | "behind you, to your left/right" |
+  | more than 150° | "behind you" |
+
+  "Facing" is `course` while walking (faster than 0.5 m/s), otherwise `heading_deg`. With neither,
+  it falls back to a compass word ("to the north-east").
+- **First orientation.** At trip start, compare `heading_deg` with the first segment's bearing:
+  "The route starts to your right." or "Walk straight ahead." This fixes the most common confusion at the start.
 
 ## Server files (Joy)
 
-- `geo.py`: `distance_m`, `bearing_deg`, `move`, `angle_diff`, `clock_face`, plus `cumulative_m` and
+- `geo.py`: `distance_m`, `bearing_deg`, `move`, `angle_diff`, `relative_direction`, `compass_word`, `point_at`, plus `cumulative_m` and
   `locate` for route tracking (see server-build.md, "Route tracking"). The fake phone already uses the first three.
 - `routing.py`:
   - `find_place(text, near) -> (name, lat, lng)` turns a spoken destination into coordinates.

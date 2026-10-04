@@ -1,0 +1,297 @@
+{
+  "scenario": {
+    "tests": "Real OSRM foot route Olin Library door -> Flora Rose House (second leg of the Olin detour walk)",
+    "source": "OSRM foot, fetched 2026-10-03"
+  },
+  "destination": {
+    "name": "Flora Rose House",
+    "lat": 42.44783,
+    "lng": -76.488893,
+    "center": [
+      42.447918,
+      -76.488786
+    ]
+  },
+  "polyline": [
+    [
+      42.448189,
+      -76.485088
+    ],
+    [
+      42.448166,
+      -76.485126
+    ],
+    [
+      42.448159,
+      -76.485153
+    ],
+    [
+      42.448148,
+      -76.48552
+    ],
+    [
+      42.448144,
+      -76.485589
+    ],
+    [
+      42.448142,
+      -76.485669
+    ],
+    [
+      42.448148,
+      -76.485788
+    ],
+    [
+      42.448156,
+      -76.485958
+    ],
+    [
+      42.448151,
+      -76.486133
+    ],
+    [
+      42.44814,
+      -76.486231
+    ],
+    [
+      42.448131,
+      -76.48631
+    ],
+    [
+      42.448088,
+      -76.486463
+    ],
+    [
+      42.448047,
+      -76.486589
+    ],
+    [
+      42.448011,
+      -76.486687
+    ],
+    [
+      42.447932,
+      -76.486857
+    ],
+    [
+      42.447874,
+      -76.487004
+    ],
+    [
+      42.447842,
+      -76.487112
+    ],
+    [
+      42.447815,
+      -76.487231
+    ],
+    [
+      42.447782,
+      -76.487417
+    ],
+    [
+      42.447773,
+      -76.487552
+    ],
+    [
+      42.447768,
+      -76.48759
+    ],
+    [
+      42.447767,
+      -76.487628
+    ],
+    [
+      42.447763,
+      -76.487707
+    ],
+    [
+      42.447702,
+      -76.487706
+    ],
+    [
+      42.44757,
+      -76.487841
+    ],
+    [
+      42.447531,
+      -76.487868
+    ],
+    [
+      42.447531,
+      -76.487894
+    ],
+    [
+      42.44753,
+      -76.487949
+    ],
+    [
+      42.44753,
+      -76.487959
+    ],
+    [
+      42.44753,
+      -76.487977
+    ],
+    [
+      42.447526,
+      -76.488191
+    ],
+    [
+      42.447526,
+      -76.488299
+    ],
+    [
+      42.447525,
+      -76.488335
+    ],
+    [
+      42.447524,
+      -76.488596
+    ],
+    [
+      42.447638,
+      -76.488705
+    ],
+    [
+      42.447736,
+      -76.488809
+    ],
+    [
+      42.447829,
+      -76.488895
+    ]
+  ],
+  "distance_m": 356.4880444340333,
+  "steps": [
+    {
+      "lat": 42.44814284177691,
+      "lng": -76.48563532919555,
+      "turn": "stairs",
+      "street": "",
+      "along_m": 46.0,
+      "distance_m": 46.0,
+      "say_ahead": "take the stairs",
+      "say_now": "Take the stairs now."
+    },
+    {
+      "lat": 42.448131,
+      "lng": -76.48631,
+      "turn": "slight_left",
+      "street": "",
+      "in_bearing": 255,
+      "out_bearing": 248,
+      "other_bearings": [
+        270
+      ],
+      "along_m": 101.58911569728716,
+      "distance_m": 55.6,
+      "path": null,
+      "toward": null,
+      "say_ahead": "keep slightly left",
+      "say_now": "Keep slightly left now."
+    },
+    {
+      "lat": 42.44777303811102,
+      "lng": -76.4875514283397,
+      "turn": "crossing",
+      "street": "",
+      "along_m": 212.0,
+      "then": [
+        {
+          "lat": 42.447763,
+          "lng": -76.487707,
+          "turn": "left",
+          "street": "",
+          "in_bearing": 270,
+          "out_bearing": 178,
+          "other_bearings": [
+            330
+          ],
+          "along_m": 224.83124417725585,
+          "distance_m": 123.2,
+          "which": null,
+          "toward": "Lyon Hall"
+        },
+        {
+          "lat": 42.447702,
+          "lng": -76.487706,
+          "turn": "slight_right",
+          "street": "",
+          "in_bearing": 180,
+          "out_bearing": 216,
+          "other_bearings": [
+            180
+          ],
+          "along_m": 231.61463094784054
+        }
+      ],
+      "distance_m": 110.4,
+      "say_ahead": "cross the street, turn left toward Lyon Hall and keep right",
+      "say_now": "Cross the street when it's safe, then turn left toward Lyon Hall and keep right."
+    },
+    {
+      "lat": 42.447531,
+      "lng": -76.487868,
+      "turn": "right",
+      "street": "",
+      "in_bearing": 210,
+      "out_bearing": 268,
+      "other_bearings": [
+        90
+      ],
+      "along_m": 254.87265079776427,
+      "distance_m": 42.9,
+      "which": null,
+      "toward": null,
+      "then": [
+        {
+          "lat": 42.447530779795585,
+          "lng": -76.4879061113678,
+          "turn": "stairs",
+          "street": "",
+          "along_m": 258.0
+        }
+      ],
+      "say_ahead": "turn right, then take the stairs",
+      "say_now": "Turn right now, then take the stairs."
+    },
+    {
+      "lat": 42.447524,
+      "lng": -76.488596,
+      "turn": "right",
+      "street": "",
+      "in_bearing": 270,
+      "out_bearing": 323,
+      "other_bearings": [
+        30,
+        135,
+        210
+      ],
+      "along_m": 314.614626250786,
+      "distance_m": 59.7,
+      "which": "slight",
+      "toward": "Flora Rose House",
+      "say_ahead": "take the gentle right toward Flora Rose House, not the sharp right",
+      "say_now": "Take the gentle right now toward Flora Rose House, not the sharp right."
+    },
+    {
+      "lat": 42.44770789811308,
+      "lng": -76.48877917754592,
+      "turn": "archway",
+      "street": "",
+      "along_m": 340.0,
+      "distance_m": 25.4,
+      "say_ahead": "go through the archway",
+      "say_now": "Go through the archway now."
+    },
+    {
+      "lat": 42.447829,
+      "lng": -76.488895,
+      "turn": "arrive",
+      "street": "",
+      "along_m": 356.4880444340333,
+      "distance_m": 16.5
+    }
+  ]
+}

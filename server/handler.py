@@ -10,6 +10,7 @@ from models import UpdateResponse
 
 DEDUPE_S = 10
 MAX_ACCURACY_M = 30
+START_AIM_M = 30
 
 
 def handle_update(req, transcript=None):
@@ -57,13 +58,14 @@ def build_reply(s, say, haptic):
     if say:
         s["last_say"], s["last_say_t"] = say, time.monotonic()
 
-    route = None
+    route = route_line = None
     if s["send_route"]:
         route = [{"lat": st["lat"], "lng": st["lng"], "turn": st["turn"],
                   "instruction": guidance.turn_phrase(st)} for st in s["route"]["steps"]]
+        route_line = [[round(lat, 6), round(lng, 6)] for lat, lng in s["route"]["polyline"]]
         s["send_route"] = False
 
-    return UpdateResponse(say=say, haptic=haptic, state=s["state"], route=route)
+    return UpdateResponse(say=say, haptic=haptic, state=s["state"], route=route, route_line=route_line)
 
 
 def known(value):
@@ -103,14 +105,21 @@ def handle_speech(s, transcript):
     if place is None:
         return f"Sorry, I couldn't find {arg}.", None
     route = routing.get_route(s["pos"], place)
+    if route is None:
+        return f"Sorry, I can't get a walking route to {place['name']} right now.", None
     sessions.start_trip(s, route)
     return start_sentence(s, route), "tick"
 
 
 def start_sentence(s, route):
     say = f"Starting route to {route['destination']['name']}, {guidance.round_m(route['distance_m'])} meters."
-    poly = route["polyline"]
-    if s["heading"] is not None and len(poly) >= 2:
-        where = geo.relative_direction(s["heading"], geo.bearing_deg(poly[0], poly[1]))
+    if s["heading"] is not None:
+        poly, cum = route["polyline"], route["cum"]
+        along, off, _ = geo.locate(s["pos"], poly, cum, 0.0, START_AIM_M)
+        here = geo.point_at(poly, cum, along)
+        aim = geo.point_at(poly, cum, min(along + START_AIM_M, route["distance_m"]))
+        # on the route: the way it runs from here; away from it: the way to reach it
+        target = (here, aim) if off <= guidance.OFF_LIMIT_M else (s["pos"], here)
+        where = geo.relative_direction(s["heading"], geo.bearing_deg(*target))
         say += " Walk straight ahead." if where == "straight ahead" else f" The route starts {where}."
     return say

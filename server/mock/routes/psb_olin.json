@@ -1,0 +1,184 @@
+{
+  "destination": {
+    "name": "Olin Library",
+    "lat": 42.447972,
+    "lng": -76.484776,
+    "center": [
+      42.447823,
+      -76.484281
+    ]
+  },
+  "polyline": [
+    [
+      42.449552,
+      -76.482172
+    ],
+    [
+      42.449535,
+      -76.482195
+    ],
+    [
+      42.449469,
+      -76.48224
+    ],
+    [
+      42.449371,
+      -76.482311
+    ],
+    [
+      42.449233,
+      -76.482392
+    ],
+    [
+      42.449107,
+      -76.482466
+    ],
+    [
+      42.448923,
+      -76.482553
+    ],
+    [
+      42.448801,
+      -76.482601
+    ],
+    [
+      42.448582,
+      -76.482696
+    ],
+    [
+      42.448494,
+      -76.482691
+    ],
+    [
+      42.448493,
+      -76.482811
+    ],
+    [
+      42.44849,
+      -76.482905
+    ],
+    [
+      42.448479,
+      -76.48323
+    ],
+    [
+      42.448407,
+      -76.483335
+    ],
+    [
+      42.448363,
+      -76.483382
+    ],
+    [
+      42.448322,
+      -76.483438
+    ],
+    [
+      42.448279,
+      -76.483506
+    ],
+    [
+      42.448257,
+      -76.483558
+    ],
+    [
+      42.448243,
+      -76.483593
+    ],
+    [
+      42.44823,
+      -76.483635
+    ],
+    [
+      42.448209,
+      -76.483728
+    ],
+    [
+      42.448174,
+      -76.484777
+    ],
+    [
+      42.448156,
+      -76.484892
+    ],
+    [
+      42.448106,
+      -76.484888
+    ],
+    [
+      42.44807,
+      -76.484882
+    ],
+    [
+      42.447969,
+      -76.484876
+    ]
+  ],
+  "distance_m": 339.012628465422,
+  "steps": [
+    {
+      "lat": 42.448494,
+      "lng": -76.482691,
+      "turn": "right",
+      "street": "",
+      "in_bearing": 180,
+      "out_bearing": 268,
+      "other_bearings": [
+        180
+      ],
+      "along_m": 126.39232035265857,
+      "distance_m": 126.4,
+      "which": null,
+      "toward": "Goldwin Smith Hall",
+      "say_ahead": "turn right toward Goldwin Smith Hall",
+      "say_now": "Turn right now toward Goldwin Smith Hall."
+    },
+    {
+      "lat": 42.448479,
+      "lng": -76.48323,
+      "turn": "left",
+      "street": "",
+      "in_bearing": 270,
+      "out_bearing": 226,
+      "other_bearings": [
+        270
+      ],
+      "along_m": 170.65261048564804,
+      "distance_m": 44.3,
+      "which": null,
+      "toward": "Olin Library",
+      "say_ahead": "turn left toward Olin Library",
+      "say_now": "Turn left now toward Olin Library."
+    },
+    {
+      "lat": 42.448156,
+      "lng": -76.484892,
+      "turn": "left",
+      "street": "",
+      "in_bearing": 255,
+      "out_bearing": 174,
+      "other_bearings": [
+        45,
+        285
+      ],
+      "along_m": 318.16855577467464,
+      "distance_m": 147.5,
+      "which": null,
+      "toward": "Olin Library",
+      "say_ahead": "turn left toward Olin Library",
+      "say_now": "Turn left now toward Olin Library."
+    },
+    {
+      "lat": 42.447969,
+      "lng": -76.484876,
+      "turn": "arrive",
+      "street": "",
+      "along_m": 339.012628465422,
+      "distance_m": 20.8
+    }
+  ],
+  "scenario": {
+    "tests": "Real OSRM foot route PSB -> Olin Library",
+    "source": "OSRM foot, fetched 2026-10-03"
+  }
+}

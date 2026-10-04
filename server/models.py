@@ -19,4 +19,5 @@ class UpdateResponse(BaseModel):
     say: str | None = None
     haptic: str | None = None   # tick, turn_left, turn_right, off_route, arrived
     state: str = "idle"         # idle, listening, thinking, navigating, off_route, arrived
-    route: list | None = None
+    route: list | None = None        # turn points, sent once per trip
+    route_line: list | None = None   # [[lat, lng], ...] the whole walking path, sent with route
