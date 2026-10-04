@@ -14,6 +14,7 @@ struct ContentView: View {
     @State private var blobPopped = false
     @FocusState private var searchFocused: Bool
     @AppStorage("AcousticMaps.hapticsOff") private var hapticsOff = false
+    @AppStorage(ServerConfig.overrideKey) private var serverURL = ""
     @Namespace private var mascot
     @ScaledMetric(relativeTo: .title) private var instructionSize = 26
 
@@ -496,6 +497,20 @@ struct ContentView: View {
                         }
                     }
                     if let error = connection.hapticError { Text(error) }
+                }
+                Section("Server address") {
+                    TextField(ServerConfig.defaultURL, text: $serverURL)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                        .keyboardType(.URL)
+                    Text("Paste a new tunnel URL here when cloudflared restarts. Empty uses the built-in one. "
+                         + "Now using: \(ServerConfig.baseURL)")
+                        .font(.footnote)
+                        .foregroundStyle(Color("SecondaryText"))
+                    Button("Reconnect live updates") {
+                        events.stop()
+                        events.start(connection: connection)
+                    }
                 }
                 Section("Server") {
                     Button("Send test update") {
