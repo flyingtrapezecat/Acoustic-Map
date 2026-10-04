@@ -133,5 +133,8 @@ def start_sentence(s, route):
         # on the route: the way it runs from here; away from it: the way to reach it
         target = (here, aim) if off <= guidance.OFF_LIMIT_M else (s["pos"], here)
         where = geo.relative_direction(s["heading"], geo.bearing_deg(*target))
-        say += " Walk straight ahead." if where == "straight ahead" else f" The route starts {where}."
+        if route.get("depart"):
+            say += f" Leave {route['depart']} through the exit {where}."
+        else:
+            say += " Walk straight ahead." if where == "straight ahead" else f" The route starts {where}."
     return say

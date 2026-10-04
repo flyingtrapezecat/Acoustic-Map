@@ -11,6 +11,9 @@ final class ConnectionTest: ObservableObject {
     @Published private(set) var lastHaptic: String?
     @Published private(set) var route: [RoutePoint] = []
     @Published private(set) var routeLine: [[Double]] = []
+    /// The route before the last reroute, drawn dotted on the map.
+    @Published private(set) var previousRouteLine: [[Double]] = []
+    @Published private(set) var arrivals = 0
     @Published var destinationName = ""
     @Published private(set) var pastTrips: [PastTrip] = []
     private var tripStartedAt: Date?
@@ -167,10 +170,14 @@ final class ConnectionTest: ObservableObject {
     func handleReply(_ reply: ServerReply) {
         let wasOnRoute = ["navigating", "off_route"].contains(state)
         if let points = reply.route { route = points }
-        if let line = reply.route_line { routeLine = line }
+        if let line = reply.route_line {
+            previousRouteLine = wasOnRoute ? routeLine : []
+            routeLine = line
+        }
         if reply.state == "navigating", !wasOnRoute, tripStartedAt == nil {
             tripStartedAt = Date()
         }
+        if reply.state == "arrived", state != "arrived" { arrivals += 1 }
         if reply.state == "arrived", let started = tripStartedAt {
             pastTrips.insert(PastTrip(
                 id: UUID(), destination: destinationName.isEmpty ? "Walking route" : destinationName,
@@ -185,6 +192,7 @@ final class ConnectionTest: ObservableObject {
         if reply.state == "idle" {
             route = []
             routeLine = []
+            previousRouteLine = []
             tripStartedAt = nil
         }
         if let newState = reply.state { state = newState }

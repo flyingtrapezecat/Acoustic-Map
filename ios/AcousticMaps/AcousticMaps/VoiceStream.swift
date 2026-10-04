@@ -121,8 +121,8 @@ final class VoiceStream: ObservableObject {
 
     private func updateAudioDiagnostics() {
         audioDiagnostics = String(
-            format: "%@ | Mic peak: %.5f | PCM peak: %.5f | Sent: %d frames",
-            microphone.inputRoute, inputPeak, pcmPeak, uploadedFrames
+            format: "%@ | Mic peak: %.5f | PCM peak: %.5f | Sent: %d frames | %@",
+            microphone.inputRoute, inputPeak, pcmPeak, uploadedFrames, microphone.sessionInfo
         )
     }
     

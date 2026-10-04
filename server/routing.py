@@ -34,7 +34,7 @@ SKIP_TYPES = {"bicycle_parking", "parking", "bench", "waste_basket"}
 # demo destinations: no network needed, and spoken short names work ("take me to Olin").
 # lat/lng is the building's center; doors are the entrances to route to (the nearest one wins).
 PSB = {"name": "Physical Sciences Building", "lat": 42.44987, "lng": -76.481791,
-       "doors": [[42.449626, -76.481794], [42.449684, -76.482135]]}
+       "doors": [[42.449684, -76.482135], [42.449626, -76.481794]]}  # main (front) entrance first
 KNOWN_PLACES = {
     ("malott",): {"name": "Malott Hall", "lat": 42.448186, "lng": -76.48019, "doors": [[42.44847, -76.480097]]},
     ("psb",): PSB,
@@ -48,6 +48,7 @@ KNOWN_PLACES = {
     ("willard", "straight"): {"name": "Willard Straight Hall", "lat": 42.446466, "lng": -76.485605},
 }
 MAX_DOORS = 4
+DEPART_NEAR_M = 60   # this close to a known building's center = starting inside it
 FILLER = {"a", "an", "the", "some", "somewhere", "place", "places", "to", "get", "i", "can", "nearest", "closest",
           "near", "me", "any", "find", "where", "is", "go", "for", "of", "nearby", "good"}
 # kinds of place the agent can ask for, as OpenStreetMap tags
@@ -186,21 +187,43 @@ def get_route(start, place, polish=True):
     if "doors" not in place and place.get("osm"):
         place["doors"] = doors(*place["osm"])
     doors_ = place.get("doors") or [[place["lat"], place["lng"]]]
-    best = None
-    for door in doors_[:MAX_DOORS]:
-        dest = {"name": place["name"], "lat": door[0], "lng": door[1], "center": center}
-        try:
-            route = osrm_route(start, dest)
-        except httpx.HTTPError as e:
-            log.warning("OSRM failed for %s: %s", place["name"], e)
-            continue
-        if route and (best is None or route["distance_m"] < best["distance_m"]):
-            best = route
+    # Inside a building, GPS can snap to a path behind it: also try leaving through its doors.
+    origins = [(None, start)]
+    if polish:  # new trips only; reroutes start from where the user is
+        origins += [(b, tuple(d)) for b in leaving(start, place) for d in b["doors"]]
+    best, best_cost, best_from = None, None, None
+    for building, origin in origins:
+        for door in doors_[:MAX_DOORS]:
+            dest = {"name": place["name"], "lat": door[0], "lng": door[1], "center": center}
+            try:
+                route = osrm_route(origin, dest)
+            except httpx.HTTPError as e:
+                log.warning("OSRM failed for %s: %s", place["name"], e)
+                continue
+            cost = route and route["distance_m"] + geo.distance_m(start, origin)
+            if route and (best is None or cost < best_cost):
+                best, best_cost, best_from = route, cost, building
     if best is None:
         return saved_route(start, place)
+    if best_from:
+        # walk from where the user is to the exit first, so tracking starts on the route
+        best["polyline"].insert(0, list(start))
+        best["depart"] = best_from["name"]
+        finish(prepare(best))
     describe(best)
     phrasing.polish(best, ask_gemini=polish)
     return best
+
+
+def leaving(start, place):
+    """Known buildings (with doors) the user is inside or right beside, other than the destination."""
+    seen, found = set(), []
+    for b in KNOWN_PLACES.values():
+        if (b.get("doors") and b["name"] not in seen and b["name"] != place["name"]
+                and geo.distance_m(start, (b["lat"], b["lng"])) <= DEPART_NEAR_M):
+            seen.add(b["name"])
+            found.append(b)
+    return found
 
 
 def saved_route(start, place):

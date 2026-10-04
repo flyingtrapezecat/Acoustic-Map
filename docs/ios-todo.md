@@ -30,6 +30,19 @@ format, so build it in your Xcode.
   - Rings around the mic button follow the voice level, and a spinning ring shows while thinking.
   - The blob bobs (and stays still with Reduce Motion), pops on a new expression, and the panel shakes when you go off route.
   - The map shows the whole route for 4 s, then follows the walker heading-up. Panning stops following; the location button resumes it. The location dot pulses.
+- **Mic, second round:** if the input is still silent after the rebuild, it retries with iOS voice processing on.
+  Diagnostics now also show the audio session's category, mode, input availability and gain.
+- **Animations matched to Joy's prototype recording:**
+  - `CompassView.swift` builds the compass from its layers: the lid flips open, the needle spins while thinking, and the blob pops out.
+  - Waveform bars while listening.
+  - When a trip starts, the compass flies to the top-right corner and the blob moves into the guidance card.
+  - Card labels like "IN 40 M" and "OFF ROUTE" (`GuidanceText.swift`).
+  - A bottom bar with remaining meters and minutes (`RouteProgress.swift`).
+  - Arrival: the compass flies back, confetti, and "You made it to X".
+- **Map:** the walked part is faded, the pre-reroute route is dotted, and a red dotted line points back to the route when you're off it.
+- **Demo walks in Past trips:** `DemoTrips.json`, made by `server/make_demo_trips.py` from the real campus walks.
+  Tap one to replay it: the dot walks the real path, the card and blob follow what the server said, the instructions are
+  spoken, and the speed can be 1x, 4x, 8x or 16x.
 - `import CoreLocation` added to `ContentView.swift`, which the strict import check (MemberImportVisibility) requires.
 
 ## 1. Microphone sends silence (blocking voice input)

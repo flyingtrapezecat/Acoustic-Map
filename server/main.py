@@ -100,7 +100,6 @@ async def listen(ws: WebSocket, session_id: str = ""):
         s["state"] = before if before not in ("listening", "thinking") else "idle"
         resp = await asyncio.to_thread(handler.reply_to_speech, session_id, text)
         log.logger.info("%s heard %r -> %r", session_id[:8], text, resp.say)
-        log.logger.info("%s audio: %s", session_id[:8], save_audio(session_id, heard))  # audio debug
         await ws.send_json({"type": "reply", **resp.model_dump()})
         await ws.close()
     except WebSocketDisconnect:
@@ -114,6 +113,7 @@ async def listen(ws: WebSocket, session_id: str = ""):
             pass
     finally:
         receiver.cancel()
+        log.logger.info("%s audio: %s", session_id[:8], save_audio(session_id, heard))  # audio debug
         if s["state"] in ("listening", "thinking"):
             s["state"] = before if before not in ("listening", "thinking") else "idle"
 

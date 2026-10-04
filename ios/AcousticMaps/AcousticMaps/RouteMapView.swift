@@ -3,8 +3,10 @@ import MapKit
 
 struct RouteMapView: View {
     let routeLine: [[Double]]
+    var previousLine: [[Double]] = []
     let turns: [RoutePoint]
     let location: CLLocation?
+    var offRoute = false
     @State private var camera: MapCameraPosition = .automatic
     @State private var cameraHeading = 0.0
     // Show the whole route first, then follow the walker (until they pan the map).
@@ -12,19 +14,44 @@ struct RouteMapView: View {
     private let overviewSeconds = 4.0
     private let followDistance = 350.0
 
-    private var coordinates: [CLLocationCoordinate2D] {
-        routeLine.compactMap { point in
+    private var coordinates: [CLLocationCoordinate2D] { Self.coordinates(routeLine) }
+
+    private static func coordinates(_ line: [[Double]]) -> [CLLocationCoordinate2D] {
+        line.compactMap { point in
             guard point.count == 2 else { return nil }
             let coordinate = CLLocationCoordinate2D(latitude: point[0], longitude: point[1])
             return CLLocationCoordinate2DIsValid(coordinate) ? coordinate : nil
         }
     }
 
+    private var progress: RouteProgress? {
+        location.flatMap { RouteProgress.locate($0.coordinate, on: coordinates) }
+    }
+
+    private let dotted = StrokeStyle(lineWidth: 4, lineCap: .round, dash: [2, 8])
+
     var body: some View {
         Map(position: $camera) {
+            let previous = Self.coordinates(previousLine)
+            if previous.count > 1 {
+                MapPolyline(coordinates: previous)
+                    .stroke(Color("SecondaryText").opacity(0.6), style: dotted)
+            }
             if coordinates.count > 1 {
-                MapPolyline(coordinates: coordinates)
-                    .stroke(Color("Action"), lineWidth: 6)
+                if let progress {
+                    let (walked, ahead) = progress.split(coordinates)
+                    MapPolyline(coordinates: walked)
+                        .stroke(Color("Action").opacity(0.3), lineWidth: 6)
+                    MapPolyline(coordinates: ahead)
+                        .stroke(Color("Action"), lineWidth: 6)
+                    if offRoute, let location {
+                        MapPolyline(coordinates: [location.coordinate, progress.nearest])
+                            .stroke(Color.red, style: dotted)
+                    }
+                } else {
+                    MapPolyline(coordinates: coordinates)
+                        .stroke(Color("Action"), lineWidth: 6)
+                }
             }
             ForEach(Array(turns.enumerated()), id: \.offset) { _, turn in
                 if let lat = turn.lat, let lng = turn.lng,
@@ -48,7 +75,7 @@ struct RouteMapView: View {
                 .annotationTitles(.hidden)
             }
         }
-        .mapStyle(.standard(elevation: .flat, pointsOfInterest: .excludingAll))
+        .mapStyle(.standard(elevation: .flat, emphasis: .muted, pointsOfInterest: .excludingAll))
         .mapControls { MapCompass() }
         .onMapCameraChange(frequency: .continuous) { context in
             cameraHeading = context.camera.heading

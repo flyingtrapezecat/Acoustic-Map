@@ -48,21 +48,39 @@ final class MicrophoneCapture {
 
     /// Rebuild the engine but keep feeding the same stream. Used when the
     /// microphone delivers pure silence (a stale input after an audio change).
+    /// The second try also turns on iOS voice processing, a different input path
+    /// built for apps that play and record at once.
     func restart() throws {
         guard let output = continuation else { return }
         stopEngine()
-        try startEngine(feeding: output)
+        try startEngine(feeding: output, voiceProcessing: true)
     }
+
+    /// Audio session state, for the diagnostics screen.
+    var sessionInfo: String {
+        let audio = AVAudioSession.sharedInstance()
+        return "\(audio.category.rawValue.replacingOccurrences(of: "AVAudioSessionCategory", with: "")) / "
+            + "\(audio.mode.rawValue.replacingOccurrences(of: "AVAudioSessionMode", with: "")), "
+            + "input \(audio.isInputAvailable ? "available" : "UNAVAILABLE"), "
+            + String(format: "gain %.2f, %.0f Hz", audio.inputGain, audio.sampleRate)
+            + (voiceProcessingOn ? ", voice processing" : "")
+    }
+    private var voiceProcessingOn = false
 
     private var onLevel: (@MainActor @Sendable (Double, Double) -> Void)?
 
     private func startEngine(
-        feeding output: AsyncThrowingStream<Data, Error>.Continuation
+        feeding output: AsyncThrowingStream<Data, Error>.Continuation,
+        voiceProcessing: Bool = false
     ) throws {
         try AcousticAudioSession.configureAndActivate()
         engine = AVAudioEngine()
 
         let input = engine.inputNode
+        if voiceProcessing {
+            try? input.setVoiceProcessingEnabled(true)
+        }
+        voiceProcessingOn = input.isVoiceProcessingEnabled
         let inputFormat = input.outputFormat(forBus: 0)
 
         guard inputFormat.sampleRate > 0,
