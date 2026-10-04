@@ -1,12 +1,13 @@
 # Phone ↔ server contract
 
 This is the one page the iOS app builds against. Field names don't change without telling Sophia.
+What the app still needs to build is listed in [ios-todo.md](ios-todo.md).
 Base URL: `https://<tunnel>.trycloudflare.com` (it changes if cloudflared restarts).
 
 | Channel | Direction | When | Status |
 |---|---|---|---|
 | `POST /update` | phone → server, reply back | once a second, always | **live** |
-| `WS /events?session_id=` | server → phone | keep open for the whole session | server step 7 |
+| `WS /events?session_id=` | server → phone | keep open for the whole session | **live** |
 | `WS /listen?session_id=` | phone → server (audio), replies back | one socket per utterance (tap or Siri) | **live** (mock speech until the xAI key is set: any audio → "take me to Malott") |
 
 ## The reply shape (the same on all three channels)
@@ -47,7 +48,7 @@ Request body: all fields are optional, and the server accepts missing ones.
 Response: the reply shape above. One reply can also carry a message the server queued for you
 because `/events` wasn't connected.
 
-## `WS /events?session_id=` (server step 7)
+## `WS /events?session_id=` (live)
 
 - Open it at launch and keep it open. If it drops, reconnect after 1 s, 2 s, then 4 s, and keep
   retrying every 4 s.

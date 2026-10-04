@@ -103,6 +103,20 @@ async def listen(url, session_id, clip):
             sender.cancel()
 
 
+def watch_events(url, session_id):
+    """Print every message the server pushes on /events (runs in a background thread)."""
+    ws_url = url.replace("https://", "wss://").replace("http://", "ws://") + f"/events?session_id={session_id}"
+
+    async def run():
+        async with websockets.connect(ws_url) as ws:
+            print(f"(events open for {session_id[:8]})", flush=True)
+            async for message in ws:
+                m = json.loads(message)
+                print(f"\n  >> PUSH #{m['id']} [{m.get('state') or ''}] {m.get('haptic') or ''} say: {m['say']}", flush=True)
+
+    threading.Thread(target=lambda: asyncio.run(run()), daemon=True).start()
+
+
 def post(client, url, body):
     """Send one update. Returns the reply dict, or None if anything went wrong."""
     try:
@@ -142,7 +156,9 @@ def main():
     parser.add_argument("--transcript", help="something to 'say' once, at tick --at")
     parser.add_argument("--at", type=int, default=2, help="tick number for --transcript")
     parser.add_argument("--listen", help="WAV clip to stream to /listen instead of walking")
-    parser.add_argument("--session", help="session id to speak for (with --listen)")
+    parser.add_argument("--session", help="session id to speak for (with --listen), or to reuse")
+    parser.add_argument("--events", action="store_true", help="also open /events and print pushed messages")
+    parser.add_argument("--no-updates", action="store_true", help="with --events: only listen, send no /update")
     args = parser.parse_args()
 
     if args.listen:
@@ -155,8 +171,12 @@ def main():
         with open(args.route) as f:
             polyline = json.load(f)["polyline"]
 
-    session_id = str(uuid.uuid4())
+    session_id = args.session or str(uuid.uuid4())
     print(f"session {session_id} -> {args.url}  (type + Enter to speak, Ctrl+C to stop)")
+    if args.events:
+        watch_events(args.url, session_id)
+        if args.no_updates:
+            threading.Event().wait()
     threading.Thread(target=read_typed_lines, daemon=True).start()
 
     prev = None

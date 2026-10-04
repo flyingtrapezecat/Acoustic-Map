@@ -11,6 +11,7 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 
 import handler
 import log
+import push
 import sessions
 import stt
 from models import UpdateRequest, UpdateResponse
@@ -28,8 +29,42 @@ def health():
 @app.post("/update")
 def update(req: UpdateRequest) -> UpdateResponse:
     resp = handler.handle_update(req, req.transcript)
+    resp = push.merge(req.session_id, resp)
     log.log_update(req, resp)
     return resp
+
+@app.websocket("/events")
+async def events(ws: WebSocket, session_id: str = ""):
+    """Server -> phone: anything said outside the /update rhythm (e.g. the agent's answer)."""
+    await ws.accept()
+    queue = push.connect(session_id)
+    log.logger.info("%s /events open", session_id[:8])
+    msg = None
+
+    async def send_loop():
+        nonlocal msg
+        while True:
+            msg = await queue.get()
+            await ws.send_json(msg)
+            msg = None
+
+    async def wait_for_close():
+        while (await ws.receive())["type"] != "websocket.disconnect":
+            pass
+
+    tasks = [asyncio.create_task(send_loop()), asyncio.create_task(wait_for_close())]
+    try:
+        await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
+    finally:
+        for task in tasks:
+            task.cancel()
+        push.disconnect(session_id, queue, [msg] if msg else [])
+        log.logger.info("%s /events closed", session_id[:8])
+
+@app.post("/debug/say")
+def debug_say(session_id: str, say: str):
+    """Test push: curl -X POST 'localhost:8000/debug/say?session_id=...&say=hello'"""
+    return {"result": push.notify(session_id, say=say, haptic="tick")}
 
 @app.websocket("/listen")
 async def listen(ws: WebSocket, session_id: str = ""):
