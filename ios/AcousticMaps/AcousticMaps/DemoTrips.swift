@@ -52,7 +52,10 @@ struct TripReplayView: View {
     @State private var speed = 4.0
     @State private var speakAloud = true
     @State private var speaker = AVSpeechSynthesizer()
+    @State private var haptics = HapticPlayer()
     @State private var lastSpoken = -1
+    @State private var rate = 4.0          // eases toward `speed`, or real time while speaking
+    private let frame = 1.0 / 30
 
     private var tickIndex: Int {
         trip.ticks.lastIndex { $0.t <= time } ?? 0
@@ -66,7 +69,14 @@ struct TripReplayView: View {
         return (index, trip.ticks[index])
     }
 
-    private var location: CLLocation { CLLocation(latitude: tick.lat, longitude: tick.lng) }
+    /// Position between the once-a-second fixes, so the dot glides instead of jumping.
+    private var location: CLLocation {
+        let next = trip.ticks[min(tickIndex + 1, trip.ticks.count - 1)]
+        let span = next.t - tick.t
+        let f = span > 0 ? min(1, max(0, (time - tick.t) / span)) : 0
+        return CLLocation(latitude: tick.lat + (next.lat - tick.lat) * f,
+                          longitude: tick.lng + (next.lng - tick.lng) * f)
+    }
 
     private var remaining: Int? {
         let line = trip.route_line.compactMap { $0.count == 2
@@ -119,6 +129,7 @@ struct TripReplayView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 Button {
                     if time >= trip.duration_s { time = 0; lastSpoken = -1 }
+                    if playing { speaker.stopSpeaking(at: .word) }
                     playing.toggle()
                 } label: {
                     Image(systemName: playing ? "pause.fill" : "play.fill")
@@ -147,7 +158,12 @@ struct TripReplayView: View {
                 .frame(maxWidth: .infinity, alignment: .trailing)
             }
             Slider(value: $time, in: 0...trip.duration_s) { editing in
-                if editing { playing = false; speaker.stopSpeaking(at: .immediate) }
+                if editing {
+                    playing = false
+                    speaker.stopSpeaking(at: .immediate)
+                } else {
+                    lastSpoken = spoken?.index ?? -1   // don't replay the line we landed on
+                }
             }
             .accessibilityLabel("Replay position")
         }
@@ -158,25 +174,31 @@ struct TripReplayView: View {
         .navigationTitle(trip.destination)
         .navigationBarTitleDisplayMode(.inline)
         .onChange(of: spoken?.index) { _, index in
-            guard playing, speakAloud, let index, index != lastSpoken,
-                  let sentence = trip.ticks[index].say else { return }
+            guard playing, let index, index != lastSpoken else { return }
             lastSpoken = index
-            try? AcousticAudioSession.configureAndActivate()
-            speaker.stopSpeaking(at: .immediate)
-            let utterance = AVSpeechUtterance(string: sentence)
-            utterance.rate = min(0.6, AVSpeechUtteranceDefaultSpeechRate * Float(1 + (speed - 1) * 0.04))
-            speaker.speak(utterance)
+            let line = trip.ticks[index]
+            if let haptic = line.haptic { try? haptics.play(haptic) }
+            guard speakAloud, let sentence = line.say else { return }
+            // queue, don't interrupt: cutting lines off is what sounded choppy
+            speaker.speak(AVSpeechUtterance(string: sentence))
         }
         .task(id: playing) {
+            guard playing else { return }
+            try? AcousticAudioSession.configureAndActivate()
+            rate = speed
             while playing {
-                try? await Task.sleep(for: .milliseconds(50))
-                time = min(trip.duration_s, time + 0.05 * speed)
+                try? await Task.sleep(for: .seconds(frame))
+                // ease to real time while a line is spoken, then back up to the chosen speed
+                let target = speakAloud && speaker.isSpeaking ? min(speed, 1.25) : speed
+                rate += (target - rate) * 0.08
+                time = min(trip.duration_s, time + frame * rate)
                 if time >= trip.duration_s { playing = false }
             }
         }
         .onDisappear {
             playing = false
             speaker.stopSpeaking(at: .immediate)
+            haptics.stop()
         }
     }
 }

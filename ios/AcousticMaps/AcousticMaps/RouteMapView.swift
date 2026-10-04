@@ -11,6 +11,7 @@ struct RouteMapView: View {
     @State private var cameraHeading = 0.0
     // Show the whole route first, then follow the walker (until they pan the map).
     @State private var routeShownAt = Date()
+    @State private var lastFollow = Date.distantPast
     private let overviewSeconds = 4.0
     private let followDistance = 350.0
 
@@ -112,10 +113,13 @@ struct RouteMapView: View {
 
     /// Keep the walker centered, heading-up while moving, unless they've panned the map.
     private func follow(_ fix: CLLocation?) {
+        // recenter at most about once a second, so frequent updates don't fight each other
         guard let fix, !camera.positionedByUser,
-              Date().timeIntervalSince(routeShownAt) > overviewSeconds else { return }
+              Date().timeIntervalSince(routeShownAt) > overviewSeconds,
+              Date().timeIntervalSince(lastFollow) > 0.9 else { return }
+        lastFollow = Date()
         let heading = fix.speed > 0.5 && fix.course >= 0 ? fix.course : cameraHeading
-        withAnimation(.easeInOut(duration: 0.9)) {
+        withAnimation(.linear(duration: 1)) {
             camera = .camera(MapCamera(centerCoordinate: fix.coordinate, distance: followDistance,
                                        heading: heading))
         }

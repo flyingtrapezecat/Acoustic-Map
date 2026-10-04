@@ -6,7 +6,21 @@ final class HapticPlayer {
     private var engine: CHHapticEngine?
     private var player: (any CHHapticPatternPlayer)?
 
+    /// Diagnostics switch: haptics off entirely (to test whether they break the microphone).
+    static var enabled: Bool {
+        get { !UserDefaults.standard.bool(forKey: "AcousticMaps.hapticsOff") }
+        set { UserDefaults.standard.set(!newValue, forKey: "AcousticMaps.hapticsOff") }
+    }
+
+    /// Stop the engine (before the microphone starts) so it can't hold on to audio.
+    func stop() {
+        try? player?.stop(atTime: CHHapticTimeImmediate)
+        player = nil
+        engine?.stop()
+    }
+
     func play(_ name: String) throws {
+        guard Self.enabled else { return }
         let events: [CHHapticEvent]
 
         switch name {
@@ -87,6 +101,8 @@ final class HapticPlayer {
             )
             let newPlayer = try engine.makePlayer(with: pattern)
             player = newPlayer
+            // don't leave the engine running between buzzes (it used to run forever)
+            engine.notifyWhenPlayersFinished { _ in .stopEngine }
             try newPlayer.start(atTime: CHHapticTimeImmediate)
         } catch {
             player = nil

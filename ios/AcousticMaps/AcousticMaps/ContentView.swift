@@ -13,6 +13,7 @@ struct ContentView: View {
     @State private var offRouteShakes = 0
     @State private var blobPopped = false
     @FocusState private var searchFocused: Bool
+    @AppStorage("AcousticMaps.hapticsOff") private var hapticsOff = false
     @Namespace private var mascot
     @ScaledMetric(relativeTo: .title) private var instructionSize = 26
 
@@ -487,6 +488,8 @@ struct ContentView: View {
                     }
                 }
                 Section("Haptics") {
+                    Toggle("Haptics on (turn off to test the mic)", isOn: Binding(
+                        get: { !hapticsOff }, set: { hapticsOff = !$0 }))
                     ForEach(["tick", "turn_left", "turn_right", "off_route", "arrived"], id: \.self) { name in
                         Button(name.replacingOccurrences(of: "_", with: " ")) {
                             connection.handleReply(ServerReply(say: nil, haptic: name, state: nil, route: nil))

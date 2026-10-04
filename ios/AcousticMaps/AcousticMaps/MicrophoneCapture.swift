@@ -9,6 +9,8 @@ enum AcousticAudioSession {
             mode: .default,
             options: [.defaultToSpeaker, .allowBluetooth, .duckOthers]
         )
+        // haptics and the microphone are allowed together (by default iOS fights over it)
+        try? audio.setAllowHapticsAndSystemSoundsDuringRecording(true)
         try audio.setActive(true)
     }
 

@@ -150,6 +150,7 @@ final class ConnectionTest: ObservableObject {
         // Block new speech before stopping the current sentence.
         isListening = true
         speaker.stopSpeaking(at: .immediate)
+        haptics.stop()
     }
 
     func endVoiceInput() {
