@@ -10,3 +10,4 @@ server/viz/
 # Local Claude Code files (agents, settings) - not shared
 .claude/
 CLAUDE.local.md
+DEVPOST.md
