@@ -15,6 +15,10 @@ final class VoiceStream: ObservableObject {
     @Published private(set) var status = "Ready to talk."
     @Published private(set) var errorMessage: String?
     @Published private(set) var isPreparing = false
+    @Published private(set) var audioDiagnostics = ""
+    private var uploadedFrames = 0
+    private var inputPeak = 0.0
+    private var pcmPeak = 0.0
     private let microphone = MicrophoneCapture()
     private var uploadTask: Task<Void, Never>?
 
@@ -31,6 +35,10 @@ final class VoiceStream: ObservableObject {
 
         isPreparing = true
         errorMessage = nil
+        uploadedFrames = 0
+        inputPeak = 0
+        pcmPeak = 0
+        audioDiagnostics = "Waiting for microphone audio..."
         defer { isPreparing = false }
 
         guard await microphone.requestPermission() else {
@@ -44,7 +52,12 @@ final class VoiceStream: ObservableObject {
         guard isActive else { return }
 
         do {
-            let audio = try microphone.start()
+            let audio = try microphone.start { [weak self] raw, pcm in
+                guard let self, self.isActive else { return }
+                self.inputPeak = max(self.inputPeak, raw)
+                self.pcmPeak = max(self.pcmPeak, pcm)
+                self.updateAudioDiagnostics()
+            }
 
             uploadTask = Task { [weak self] in
                 guard let self else { return }
@@ -61,6 +74,8 @@ final class VoiceStream: ObservableObject {
                             let frame = Data(pending.prefix(3_200))
                             pending.removeFirst(3_200)
                             try await sendAudio(frame)
+                            uploadedFrames += 1
+                            updateAudioDiagnostics()
                         }
                     }
                 } catch {
@@ -71,6 +86,13 @@ final class VoiceStream: ObservableObject {
         } catch {
             fail(error.localizedDescription)
         }
+    }
+
+    private func updateAudioDiagnostics() {
+        audioDiagnostics = String(
+            format: "%@ | Mic peak: %.5f | PCM peak: %.5f | Sent: %d frames",
+            microphone.inputRoute, inputPeak, pcmPeak, uploadedFrames
+        )
     }
     
     func start(connection: ConnectionTest) {

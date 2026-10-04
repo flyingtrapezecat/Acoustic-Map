@@ -6,7 +6,21 @@ import CoreLocation
 // Keep screen updates on the main thread.
 @MainActor
 final class ConnectionTest: ObservableObject {
-    @Published var instruction = "Ready to test."
+    @Published var instruction = "Where to?"
+    @Published private(set) var state = "idle"
+    @Published private(set) var lastHaptic: String?
+    @Published private(set) var route: [RoutePoint] = []
+    @Published private(set) var routeLine: [[Double]] = []
+    @Published var destinationName = ""
+    @Published private(set) var pastTrips: [PastTrip] = []
+    private var tripStartedAt: Date?
+
+    init() {
+        if let data = UserDefaults.standard.data(forKey: "AcousticMaps.pastTrips"),
+           let trips = try? JSONDecoder().decode([PastTrip].self, from: data) {
+            pastTrips = trips
+        }
+    }
     @Published var rawReply = "No reply yet."
     @Published var errorMessage: String?
     @Published var isSending = false
@@ -36,7 +50,8 @@ final class ConnectionTest: ObservableObject {
 
     func sendRealUpdate(
         location: CLLocation,
-        heading: Double?
+        heading: Double?,
+        transcript: String? = nil
     ) async {
         let update = PhoneUpdate(
             session_id: sessionID,
@@ -49,7 +64,7 @@ final class ConnectionTest: ObservableObject {
             timestamp: ISO8601DateFormatter().string(
                 from: location.timestamp
             ),
-            transcript: nil
+            transcript: transcript
         )
 
         await send(update)
@@ -74,7 +89,7 @@ final class ConnectionTest: ObservableObject {
             var body = try JSONSerialization.jsonObject(with: encoded)
                 as? [String: Any] ?? [:]
 
-            body["transcript"] = NSNull()
+            if update.transcript == nil { body["transcript"] = NSNull() }
             if update.heading_deg == nil {
                 body["heading_deg"] = NSNull()
             }
@@ -133,6 +148,30 @@ final class ConnectionTest: ObservableObject {
 
     // HTTP responses and voice replies use the same method
     func handleReply(_ reply: ServerReply) {
+        let wasOnRoute = ["navigating", "off_route"].contains(state)
+        if let points = reply.route { route = points }
+        if let line = reply.route_line { routeLine = line }
+        if reply.state == "navigating", !wasOnRoute, tripStartedAt == nil {
+            tripStartedAt = Date()
+        }
+        if reply.state == "arrived", let started = tripStartedAt {
+            pastTrips.insert(PastTrip(
+                id: UUID(), destination: destinationName.isEmpty ? "Walking route" : destinationName,
+                date: Date(), duration: Date().timeIntervalSince(started)
+            ), at: 0)
+            pastTrips = Array(pastTrips.prefix(30))
+            if let data = try? JSONEncoder().encode(pastTrips) {
+                UserDefaults.standard.set(data, forKey: "AcousticMaps.pastTrips")
+            }
+            tripStartedAt = nil
+        }
+        if reply.state == "idle" {
+            route = []
+            routeLine = []
+            tripStartedAt = nil
+        }
+        if let newState = reply.state { state = newState }
+        if let haptic = reply.haptic { lastHaptic = haptic }
         // haptics can arrive without a spoken instruction
         if let name = reply.haptic {
             do {
@@ -161,17 +200,17 @@ final class ConnectionTest: ObservableObject {
     }
 
     private func speak(_ sentence: String) throws {
-        let audio = AVAudioSession.sharedInstance()
-
         // play through the speaker, including with silent mode on
-        try audio.setCategory(
-            .playAndRecord,
-            mode: .default,
-            options: [.defaultToSpeaker, .duckOthers]
-        )
-        try audio.setActive(true)
+        try AcousticAudioSession.configureAndActivate()
 
         speaker.stopSpeaking(at: .immediate)
         speaker.speak(AVSpeechUtterance(string: sentence))
     }
+}
+
+struct PastTrip: Codable, Identifiable {
+    let id: UUID
+    let destination: String
+    let date: Date
+    let duration: TimeInterval
 }
