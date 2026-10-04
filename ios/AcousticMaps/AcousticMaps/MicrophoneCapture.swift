@@ -14,6 +14,37 @@ enum AcousticAudioSession {
         try audio.setActive(true)
     }
 
+    /// Audio setups to try when the microphone delivers pure silence; the first one that
+    /// hears anything is remembered and tried first next time.
+    enum MicSetup: String, CaseIterable {
+        case standard, voiceProcessing, measurement, recordOnly
+
+        static var preferred: MicSetup {
+            get { MicSetup(rawValue: UserDefaults.standard.string(forKey: "AcousticMaps.micSetup") ?? "") ?? .standard }
+            set { UserDefaults.standard.set(newValue.rawValue, forKey: "AcousticMaps.micSetup") }
+        }
+
+        /// Try order: the remembered one first, then the rest.
+        static var order: [MicSetup] { [preferred] + allCases.filter { $0 != preferred } }
+    }
+
+    static func configureForMicrophone(_ setup: MicSetup) throws {
+        let audio = AVAudioSession.sharedInstance()
+        switch setup {
+        case .standard, .voiceProcessing:
+            try configureAndActivate()
+        case .measurement:  // what the app used when recording first worked (19:37)
+            try audio.setCategory(.playAndRecord, mode: .measurement,
+                                  options: [.defaultToSpeaker, .allowBluetooth, .duckOthers])
+            try? audio.setAllowHapticsAndSystemSoundsDuringRecording(true)
+            try audio.setActive(true)
+        case .recordOnly:   // no playback at all while listening
+            try? audio.setActive(false, options: .notifyOthersOnDeactivation)
+            try audio.setCategory(.record, mode: .measurement, options: [])
+            try audio.setActive(true)
+        }
+    }
+
     static func deactivate() {
         try? AVAudioSession.sharedInstance().setActive(
             false,
@@ -44,24 +75,32 @@ final class MicrophoneCapture {
             )
         continuation = output
         self.onLevel = onLevel
-        try startEngine(feeding: output)
+        setups = AcousticAudioSession.MicSetup.order
+        try startEngine(feeding: output, setup: setups.removeFirst())
         return stream
     }
 
-    /// Rebuild the engine but keep feeding the same stream. Used when the
-    /// microphone delivers pure silence (a stale input after an audio change).
-    /// The second try also turns on iOS voice processing, a different input path
-    /// built for apps that play and record at once.
-    func restart() throws {
-        guard let output = continuation else { return }
+    private var setups: [AcousticAudioSession.MicSetup] = []
+    private(set) var setup = AcousticAudioSession.MicSetup.standard
+
+    /// The current setup heard sound: use it first from now on.
+    func rememberWorkingSetup() {
+        AcousticAudioSession.MicSetup.preferred = setup
+    }
+
+    /// The microphone delivered pure silence: rebuild the engine with the next audio
+    /// setup, still feeding the same stream. Returns false when every setup was tried.
+    func tryNextSetup() throws -> Bool {
+        guard let output = continuation, !setups.isEmpty else { return false }
         stopEngine()
-        try startEngine(feeding: output, voiceProcessing: true)
+        try startEngine(feeding: output, setup: setups.removeFirst())
+        return true
     }
 
     /// Audio session state, for the diagnostics screen.
     var sessionInfo: String {
         let audio = AVAudioSession.sharedInstance()
-        return "\(audio.category.rawValue.replacingOccurrences(of: "AVAudioSessionCategory", with: "")) / "
+        return "setup \(setup.rawValue): \(audio.category.rawValue.replacingOccurrences(of: "AVAudioSessionCategory", with: "")) / "
             + "\(audio.mode.rawValue.replacingOccurrences(of: "AVAudioSessionMode", with: "")), "
             + "input \(audio.isInputAvailable ? "available" : "UNAVAILABLE"), "
             + String(format: "gain %.2f, %.0f Hz", audio.inputGain, audio.sampleRate)
@@ -73,13 +112,14 @@ final class MicrophoneCapture {
 
     private func startEngine(
         feeding output: AsyncThrowingStream<Data, Error>.Continuation,
-        voiceProcessing: Bool = false
+        setup: AcousticAudioSession.MicSetup
     ) throws {
-        try AcousticAudioSession.configureAndActivate()
+        self.setup = setup
+        try AcousticAudioSession.configureForMicrophone(setup)
         engine = AVAudioEngine()
 
         let input = engine.inputNode
-        if voiceProcessing {
+        if setup == .voiceProcessing {
             try? input.setVoiceProcessingEnabled(true)
         }
         voiceProcessingOn = input.isVoiceProcessingEnabled

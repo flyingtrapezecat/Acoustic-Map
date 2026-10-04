@@ -20,7 +20,6 @@ final class VoiceStream: ObservableObject {
     @Published private(set) var level = 0.0
     private var uploadedFrames = 0
     private var silentFrames = 0
-    private var restartedMicrophone = false
     // 1.2 s of exact zeros means a stale input, not a quiet room.
     private let silentFramesLimit = 12
     private var inputPeak = 0.0
@@ -43,7 +42,6 @@ final class VoiceStream: ObservableObject {
         errorMessage = nil
         uploadedFrames = 0
         silentFrames = 0
-        restartedMicrophone = false
         inputPeak = 0
         pcmPeak = 0
         level = 0
@@ -102,21 +100,25 @@ final class VoiceStream: ObservableObject {
         }
     }
 
-    /// Pure digital silence (every sample 0) means the input is stale: rebuild the
-    /// microphone once, and if it's still silent, say so instead of uploading nothing.
+    /// Pure digital silence (every sample 0) means iOS isn't giving us the microphone:
+    /// switch to the next audio setup, and remember the first one that hears anything.
     private func checkForSilence(_ frame: Data) throws {
         let silent = frame.allSatisfy { $0 == 0 }
-        silentFrames = silent ? silentFrames + 1 : 0
+        if !silent {
+            if silentFrames >= 0 { microphone.rememberWorkingSetup() }
+            silentFrames = -1_000_000   // heard sound: stop checking for this utterance
+            return
+        }
+        silentFrames += 1
         guard silentFrames >= silentFramesLimit else { return }
         silentFrames = 0
-        if restartedMicrophone {
+        audioDiagnostics = "Microphone silent with setup \(microphone.setup.rawValue); trying the next one."
+        guard try microphone.tryNextSetup() else {
             throw NSError(domain: "AcousticMaps.Microphone", code: 2, userInfo: [
-                NSLocalizedDescriptionKey: "The microphone isn't picking up any sound. Please try again."
+                NSLocalizedDescriptionKey: "The microphone isn't picking up any sound with any audio setup. "
+                    + "Check that no other app (or screen recording) is using the microphone."
             ])
         }
-        restartedMicrophone = true
-        audioDiagnostics = "Microphone was silent; restarting it."
-        try microphone.restart()
     }
 
     private func updateAudioDiagnostics() {
