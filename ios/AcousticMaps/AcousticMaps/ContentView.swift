@@ -27,6 +27,43 @@ struct ContentView: View {
                     }
 
                 Text(locationReader.status)
+
+                Text("Haptic Tests")
+                    .font(.headline)
+                    .accessibilityAddTraits(.isHeader)
+
+                // Use the same handler as a server reply, without a request.
+                ForEach(
+                    ["tick", "turn_left", "turn_right", "off_route", "arrived"],
+                    id: \.self
+                ) { name in
+                    Button {
+                        connection.handleReply(
+                            ServerReply(
+                                say: nil,
+                                haptic: name,
+                                state: nil,
+                                route: nil
+                            )
+                        )
+                    } label: {
+                        Label(
+                            name.replacingOccurrences(of: "_", with: " "),
+                            systemImage: "waveform"
+                        )
+                        .frame(minHeight: 44)
+                    }
+                    .buttonStyle(.bordered)
+                    .accessibilityLabel(
+                        "Test \(name.replacingOccurrences(of: "_", with: " ")) haptic"
+                    )
+                }
+
+                if let error = connection.hapticError {
+                    Text("Haptic error: \(error)")
+                        .foregroundStyle(.red)
+                        .textSelection(.enabled)
+                }
                 
                 Button {
                     Task {

@@ -10,7 +10,7 @@ final class LocationReader: NSObject, ObservableObject,
     @Published var headingDegrees: Double?
     @Published var status = "Location has not started."
 
-    var onUpdate: ((CLLocation, Double) async -> Void)?
+    var onUpdate: ((CLLocation, Double?) async -> Void)?
 
     private let manager = CLLocationManager()
     private var tripActive = false
@@ -126,11 +126,12 @@ final class LocationReader: NSObject, ObservableObject,
     private func sendIfReady(_ fix: CLLocation) {
         guard tripActive,
               sendTask == nil,
-              let heading = headingDegrees,
               let onUpdate,
               Date().timeIntervalSince(lastSentAt) >= 1 else {
             return
         }
+
+        let heading = headingDegrees
 
         lastSentAt = Date()
 

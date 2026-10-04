@@ -6,7 +6,7 @@ struct PhoneUpdate: Codable {
     let lat: Double
     let lng: Double
     let accuracy_m: Double
-    let heading_deg: Double
+    let heading_deg: Double?
     let course_deg: Double
     let speed_mps: Double
     let timestamp: String

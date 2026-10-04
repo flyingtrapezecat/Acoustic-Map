@@ -11,10 +11,12 @@ final class ConnectionTest: ObservableObject {
     @Published var errorMessage: String?
     @Published var isSending = false
     @Published private(set) var isListening = false
+    @Published var hapticError: String?
 
-    // Location updates and voice streaming share this session.
-    let sessionID = UUID().uuidString
+    private let haptics = HapticPlayer()
     private let speaker = AVSpeechSynthesizer()
+
+    let sessionID = UUID().uuidString
 
     func sendFakeUpdate() async {
         let update = PhoneUpdate(
@@ -34,7 +36,7 @@ final class ConnectionTest: ObservableObject {
 
     func sendRealUpdate(
         location: CLLocation,
-        heading: Double
+        heading: Double?
     ) async {
         let update = PhoneUpdate(
             session_id: sessionID,
@@ -69,11 +71,13 @@ final class ConnectionTest: ObservableObject {
 
         do {
             let encoded = try JSONEncoder().encode(update)
-
-            // Grok handles transcripts on the server.
             var body = try JSONSerialization.jsonObject(with: encoded)
                 as? [String: Any] ?? [:]
+
             body["transcript"] = NSNull()
+            if update.heading_deg == nil {
+                body["heading_deg"] = NSNull()
+            }
 
             var request = URLRequest(
                 url: base.appendingPathComponent("update")
@@ -91,6 +95,8 @@ final class ConnectionTest: ObservableObject {
             let (data, response) = try await URLSession.shared.data(
                 for: request
             )
+
+            guard !Task.isCancelled else { return }
             rawReply = String(decoding: data, as: UTF8.self)
 
             guard let http = response as? HTTPURLResponse else {
@@ -110,7 +116,6 @@ final class ConnectionTest: ObservableObject {
 
             handleReply(reply)
         } catch {
-            // Turning the trip off cancels its pending request.
             guard !Task.isCancelled else { return }
             errorMessage = error.localizedDescription
         }
@@ -126,8 +131,18 @@ final class ConnectionTest: ObservableObject {
         isListening = false
     }
 
-    // HTTP responses and voice replies use the same method.
+    // HTTP responses and voice replies use the same method
     func handleReply(_ reply: ServerReply) {
+        // haptics can arrive without a spoken instruction
+        if let name = reply.haptic {
+            do {
+                try haptics.play(name)
+                hapticError = nil
+            } catch {
+                hapticError = error.localizedDescription
+            }
+        }
+
         guard let sentence = reply.say,
               !sentence.trimmingCharacters(
                   in: .whitespacesAndNewlines
@@ -135,7 +150,7 @@ final class ConnectionTest: ObservableObject {
 
         instruction = sentence
 
-        // Never speak while microphone capture is active.
+        // Don't speak while microphone capture is active.
         guard !isListening else { return }
 
         do {
@@ -148,7 +163,7 @@ final class ConnectionTest: ObservableObject {
     private func speak(_ sentence: String) throws {
         let audio = AVAudioSession.sharedInstance()
 
-        // Support recording and speech through the loudspeaker.
+        // play through the speaker, including with silent mode on
         try audio.setCategory(
             .playAndRecord,
             mode: .default,
